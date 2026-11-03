@@ -1,0 +1,107 @@
+/* AirExpay design tokens — shadcn-style HSL channels. Use as hsl(var(--token)). */
+:root {
+  color-scheme: light;
+  /* Neutrals (cool slate) */
+  --background: 220 20% 98%;
+  --foreground: 222 32% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 32% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 32% 11%;
+  --muted: 220 16% 95%;
+  --muted-foreground: 220 10% 38%;
+  --border: 220 14% 88%;
+  --input: 220 10% 56%;
+  --secondary: 220 16% 94%;
+  --secondary-foreground: 222 32% 11%;
+  /* The one accent: deep ink-blue */
+  --primary: 214 52% 25%; /* #1e3a5f */
+  --primary-foreground: 0 0% 100%;
+  --accent: 213 45% 95%;
+  --accent-foreground: 214 52% 25%;
+  --ring: 213 60% 42%;
+  --destructive: 0 66% 42%;
+  --destructive-foreground: 0 0% 100%;
+
+  /* Payment status: bg / fg / border (always render with a text label) */
+  --status-waiting: 220 16% 94%;     --status-waiting-fg: 220 18% 30%;     --status-waiting-border: 220 14% 82%;
+  --status-confirming: 213 70% 95%;  --status-confirming-fg: 213 70% 32%;  --status-confirming-border: 213 55% 82%;
+  --status-paid: 150 45% 93%;        --status-paid-fg: 152 60% 23%;        --status-paid-border: 150 35% 76%;
+  --status-underpaid: 40 85% 93%;    --status-underpaid-fg: 30 85% 27%;    --status-underpaid-border: 38 70% 74%;
+  --status-expired: 220 10% 94%;     --status-expired-fg: 220 8% 34%;      --status-expired-border: 220 8% 80%;
+  --status-failed: 0 75% 96%;        --status-failed-fg: 0 65% 36%;        --status-failed-border: 0 60% 84%;
+  --status-refunded: 262 45% 95%;    --status-refunded-fg: 262 40% 38%;    --status-refunded-border: 262 35% 84%;
+
+  /* Simulation / sandbox banner */
+  --sim: 40 85% 93%; --sim-fg: 30 85% 25%; --sim-border: 38 70% 70%;
+
+  /* Radius */
+  --radius: 0.625rem;   /* 10px — cards, inputs (lg) */
+  --radius-sm: 0.375rem;/* 6px — badges, small controls */
+  --radius-xl: 1rem;    /* 16px — sheets, checkout card */
+
+  /* Shadows (soft, low-contrast) */
+  --shadow-xs: 0 1px 2px hsl(222 32% 11% / 0.05);
+  --shadow-sm: 0 1px 3px hsl(222 32% 11% / 0.06), 0 1px 2px hsl(222 32% 11% / 0.04);
+  --shadow-md: 0 4px 12px hsl(222 32% 11% / 0.06), 0 2px 4px hsl(222 32% 11% / 0.04);
+  --shadow-lg: 0 16px 40px hsl(222 32% 11% / 0.10), 0 4px 10px hsl(222 32% 11% / 0.05);
+
+  /* Type */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: "Newsreader", Georgia, "Times New Roman", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --text-xs: 0.75rem;   --leading-xs: 1rem;
+  --text-sm: 0.875rem;  --leading-sm: 1.25rem;
+  --text-base: 1rem;    --leading-base: 1.5rem;
+  --text-lg: 1.125rem;  --leading-lg: 1.75rem;
+  --text-xl: 1.25rem;   --leading-xl: 1.75rem;
+  --text-2xl: 1.5rem;   --leading-2xl: 2rem;
+  --text-3xl: 1.875rem; --leading-3xl: 2.25rem;
+  --text-4xl: 2.5rem;   --leading-4xl: 2.875rem;
+  --text-5xl: 3.5rem;   --leading-5xl: 3.85rem;
+
+  /* Spacing base unit 4px (Tailwind default scale); layout constants */
+  --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem; --space-4: 1rem;
+  --space-6: 1.5rem; --space-8: 2rem; --space-12: 3rem; --space-16: 4rem; --space-24: 6rem;
+  --sidebar-width: 15rem;
+  --content-max: 72rem;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: 222 24% 8%;
+  --foreground: 210 20% 94%;
+  --card: 222 22% 11%;
+  --card-foreground: 210 20% 94%;
+  --popover: 222 22% 11%;
+  --popover-foreground: 210 20% 94%;
+  --muted: 222 18% 15%;
+  --muted-foreground: 215 12% 68%;
+  --border: 222 15% 21%;
+  --input: 222 10% 46%;
+  --secondary: 222 18% 16%;
+  --secondary-foreground: 210 20% 94%;
+  --primary: 212 75% 74%;
+  --primary-foreground: 222 32% 10%;
+  --accent: 213 35% 18%;
+  --accent-foreground: 212 75% 80%;
+  --ring: 212 75% 70%;
+  --destructive: 0 70% 66%;
+  --destructive-foreground: 222 32% 10%;
+
+  --status-waiting: 220 16% 18%;    --status-waiting-fg: 220 16% 80%;    --status-waiting-border: 220 14% 30%;
+  --status-confirming: 213 45% 18%; --status-confirming-fg: 213 85% 80%; --status-confirming-border: 213 40% 32%;
+  --status-paid: 152 35% 15%;       --status-paid-fg: 150 50% 72%;       --status-paid-border: 152 30% 28%;
+  --status-underpaid: 35 45% 15%;   --status-underpaid-fg: 40 85% 72%;   --status-underpaid-border: 35 40% 30%;
+  --status-expired: 220 10% 17%;    --status-expired-fg: 220 8% 72%;     --status-expired-border: 220 8% 30%;
+  --status-failed: 0 40% 17%;       --status-failed-fg: 0 85% 80%;       --status-failed-border: 0 35% 32%;
+  --status-refunded: 262 30% 18%;   --status-refunded-fg: 262 70% 84%;   --status-refunded-border: 262 25% 34%;
+  --sim: 35 45% 15%; --sim-fg: 40 85% 74%; --sim-border: 35 40% 32%;
+
+  --shadow-xs: 0 1px 2px hsl(0 0% 0% / 0.3);
+  --shadow-sm: 0 1px 3px hsl(0 0% 0% / 0.35);
+  --shadow-md: 0 4px 12px hsl(0 0% 0% / 0.35);
+  --shadow-lg: 0 16px 40px hsl(0 0% 0% / 0.45);
+}
+
+.tabular, .amount, [data-amount] { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
