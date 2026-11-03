@@ -6,14 +6,14 @@ import {
 import { isPaymentStatus } from '@airexpay/shared';
 import { nowPaymentsIpnSchema } from '@airexpay/validation';
 import type { Context } from 'hono';
-import type { MemoryDatabase } from '../db/memory.ts';
+import type { InvoiceRepository } from '../db/repository.ts';
 import { errorBody, logEvent, redactHeaders } from '../http.ts';
 
 const MAX_BODY = 1_000_000;
 
 export async function handleNowPaymentsWebhook(
   c: Context,
-  deps: { db: MemoryDatabase; ipnSecret: string },
+  deps: { db: InvoiceRepository; ipnSecret: string },
 ): Promise<Response> {
   const requestId = c.get('requestId') as string;
   const raw = await c.req.text();
@@ -44,7 +44,7 @@ export async function handleNowPaymentsWebhook(
   }
 
   if (!verification.valid) {
-    const stored = deps.db.acceptWebhook({
+    const stored = await deps.db.acceptWebhook({
       dedupeKey,
       signatureValid: false,
       headers,
@@ -72,7 +72,7 @@ export async function handleNowPaymentsWebhook(
 
   const parsed = nowPaymentsIpnSchema.safeParse(verification.parsed);
   if (!parsed.success) {
-    deps.db.acceptWebhook({
+    await deps.db.acceptWebhook({
       dedupeKey,
       signatureValid: true,
       headers,
@@ -93,7 +93,7 @@ export async function handleNowPaymentsWebhook(
 
   const rawStatus = parsed.data.payment_status;
   const toStatus = isPaymentStatus(rawStatus) ? rawStatus : undefined;
-  const result = deps.db.acceptWebhook({
+  const result = await deps.db.acceptWebhook({
     dedupeKey,
     signatureValid: true,
     headers,

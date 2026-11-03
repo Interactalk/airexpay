@@ -1,75 +1,35 @@
+import { SIMULATION_ORG_IDS } from '@airexpay/configuration';
 import type { AuditRecord, PaymentSnapshot, TransitionResult } from '@airexpay/payment-core';
 import { applyPaymentTransition, emptyPaymentSnapshot } from '@airexpay/payment-core';
-import type { InvoiceStatus, PaymentStatus } from '@airexpay/shared';
+import type {
+  AcceptWebhookInput,
+  AcceptWebhookResult,
+  CreateInvoiceInput,
+  DeliveryInput,
+  IdempotencyRecord,
+  InvoiceRecord,
+  InvoiceRepository,
+  OutboxRecord,
+  WebhookEndpointRecord,
+  WebhookRecord,
+} from './repository.ts';
 
-export interface InvoiceRecord {
-  id: string;
-  organizationId: string;
-  publicId: string;
-  number: string;
-  priceAmount: string;
-  priceCurrency: string;
-  payCurrency: string;
-  payAmount: string;
-  payAddress: string;
-  status: InvoiceStatus;
-  provider: 'mock';
-  providerInvoiceId: string;
-  providerPaymentId: string;
-  paymentId: string;
-  orderId: string;
-  description: string | null;
-  checkoutUrl: string;
-  expiresAt: string;
-  createdAt: string;
-  overpaid: boolean;
-  latePaymentReview: boolean;
-  actuallyPaid: string | null;
-  paymentStatus: PaymentStatus;
-  rawStatus: string;
-  network: string | null;
+export type {
+  AcceptWebhookInput,
+  AcceptWebhookResult,
+  CreateInvoiceInput,
+  IdempotencyRecord,
+  InvoiceRecord,
+  WebhookRecord,
+} from './repository.ts';
+
+function merchantNameFor(organizationId: string): string {
+  if (organizationId === SIMULATION_ORG_IDS.alpha) return 'Northwind Studio';
+  if (organizationId === SIMULATION_ORG_IDS.beta) return 'Harbor Goods';
+  return 'Merchant';
 }
 
-export interface WebhookRecord {
-  id: string;
-  provider: 'nowpayments';
-  signatureValid: boolean;
-  headers: Record<string, string>;
-  payload: unknown;
-  dedupeKey: string;
-  receivedAt: string;
-  processedAt: string | null;
-  reason: string | null;
-}
-
-export interface IdempotencyRecord {
-  organizationId: string;
-  key: string;
-  requestHash: string;
-  statusCode: number;
-  response: unknown;
-  expiresAt: string;
-}
-
-export interface CreateInvoiceInput {
-  organizationId: string;
-  publicId: string;
-  priceAmount: string;
-  priceCurrency: string;
-  payCurrency: string;
-  payAmount: string;
-  payAddress: string;
-  providerInvoiceId: string;
-  providerPaymentId: string;
-  orderId: string;
-  description: string | null;
-  checkoutUrl: string;
-  expiresAt: string;
-  createdAt: string;
-  network: string | null;
-}
-
-export class MemoryDatabase {
+export class MemoryDatabase implements InvoiceRepository {
   private readonly invoices = new Map<string, InvoiceRecord>();
   private readonly byPublicId = new Map<string, string>();
   private readonly byProviderPayment = new Map<string, string>();
@@ -77,6 +37,9 @@ export class MemoryDatabase {
   private readonly webhooks = new Map<string, WebhookRecord>();
   private readonly idempotency = new Map<string, IdempotencyRecord>();
   private readonly audits: AuditRecord[] = [];
+  private readonly endpoints = new Map<string, WebhookEndpointRecord>();
+  private readonly outbox = new Map<string, OutboxRecord>();
+  private readonly deliveries: DeliveryInput[] = [];
   private invoiceSequence = 1000;
 
   listWebhooks(): readonly WebhookRecord[] {
@@ -103,6 +66,12 @@ export class MemoryDatabase {
     const invoice = this.invoices.get(internal);
     if (!invoice || invoice.organizationId !== organizationId) return null;
     return invoice;
+  }
+
+  getByPublicId(publicId: string): InvoiceRecord | null {
+    const internal = this.byPublicId.get(publicId);
+    if (!internal) return null;
+    return this.invoices.get(internal) ?? null;
   }
 
   createInvoice(input: CreateInvoiceInput): InvoiceRecord {
@@ -149,11 +118,13 @@ export class MemoryDatabase {
       paymentStatus: 'waiting',
       rawStatus: 'waiting',
       network: input.network,
+      merchantName: merchantNameFor(input.organizationId),
     };
     this.invoices.set(record.id, record);
     this.byPublicId.set(record.publicId, record.id);
     this.byProviderPayment.set(record.providerPaymentId, record.id);
     this.snapshots.set(paymentId, opened.snapshot);
+    this.rememberOutbox(opened.snapshot);
     return record;
   }
 
@@ -173,25 +144,9 @@ export class MemoryDatabase {
 
   /**
    * Persist the raw webhook once. Exact duplicate dedupe keys do not insert again
-   * and do not re-apply a transition.
+   * and do not re-apply a transition. Rejected transitions still keep their audit row.
    */
-  acceptWebhook(input: {
-    dedupeKey: string;
-    signatureValid: boolean;
-    headers: Record<string, string>;
-    payload: unknown;
-    receivedAt: string;
-    providerPaymentId?: string;
-    toStatus?: PaymentStatus;
-    actuallyPaid?: string | null;
-    payAmount?: string | null;
-    reason: string | null;
-  }): {
-    duplicate: boolean;
-    webhook: WebhookRecord;
-    transition: TransitionResult | null;
-    matched: boolean;
-  } {
+  acceptWebhook(input: AcceptWebhookInput): AcceptWebhookResult {
     const existing = this.webhooks.get(input.dedupeKey);
     if (existing) {
       return { duplicate: true, webhook: existing, transition: null, matched: false };
@@ -231,6 +186,7 @@ export class MemoryDatabase {
         if (transition.audit) this.audits.push(transition.audit);
         if (transition.applied && transition.snapshot.status && transition.invoiceStatus) {
           this.snapshots.set(invoice.paymentId, transition.snapshot);
+          this.rememberOutbox(transition.snapshot);
           invoice.paymentStatus = transition.snapshot.status;
           invoice.rawStatus = input.toStatus;
           invoice.status = transition.invoiceStatus;
@@ -247,5 +203,98 @@ export class MemoryDatabase {
     }
     this.webhooks.set(input.dedupeKey, webhook);
     return { duplicate: false, webhook, transition, matched };
+  }
+
+  saveWebhookEndpoint(input: {
+    id?: string;
+    organizationId: string;
+    url: string;
+    secret: string;
+    events: string[];
+    active?: boolean;
+  }): WebhookEndpointRecord {
+    const record: WebhookEndpointRecord = {
+      id: input.id ?? crypto.randomUUID(),
+      organizationId: input.organizationId,
+      url: input.url,
+      secret: input.secret,
+      events: [...input.events],
+      active: input.active ?? true,
+    };
+    this.endpoints.set(record.id, record);
+    return record;
+  }
+
+  listEndpoints(organizationId: string): readonly WebhookEndpointRecord[] {
+    return [...this.endpoints.values()].filter(
+      (endpoint) => endpoint.organizationId === organizationId && endpoint.active,
+    );
+  }
+
+  listDueOutbox(nowIso: string, limit: number, maxAttempts: number): readonly OutboxRecord[] {
+    return [...this.outbox.values()]
+      .filter((event) => {
+        if (event.publishedAt || event.deadLetteredAt) return false;
+        if (event.attempts >= maxAttempts) return false;
+        if (event.nextRetryAt && event.nextRetryAt > nowIso) return false;
+        return true;
+      })
+      .sort(
+        (left, right) =>
+          left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id),
+      )
+      .slice(0, limit);
+  }
+
+  insertDelivery(input: DeliveryInput): void {
+    this.deliveries.push(input);
+  }
+
+  markOutboxPublished(id: string, at: string, attempts: number): void {
+    const event = this.requireOutbox(id);
+    event.publishedAt = at;
+    event.attempts = attempts;
+    event.nextRetryAt = null;
+    event.deadLetteredAt = null;
+  }
+
+  markOutboxRetry(id: string, attempts: number, nextRetryAt: string): void {
+    const event = this.requireOutbox(id);
+    event.attempts = attempts;
+    event.nextRetryAt = nextRetryAt;
+  }
+
+  markOutboxDeadLetter(id: string, at: string, attempts: number): void {
+    const event = this.requireOutbox(id);
+    event.attempts = attempts;
+    event.deadLetteredAt = at;
+    event.nextRetryAt = null;
+  }
+
+  getOutbox(id: string): OutboxRecord | null {
+    return this.outbox.get(id) ?? null;
+  }
+
+  private requireOutbox(id: string): OutboxRecord {
+    const event = this.outbox.get(id);
+    if (!event) throw new Error('outbox event not found');
+    return event;
+  }
+
+  private rememberOutbox(snapshot: PaymentSnapshot): void {
+    for (const event of snapshot.outbox) {
+      if (this.outbox.has(event.id)) continue;
+      this.outbox.set(event.id, {
+        id: event.id,
+        organizationId: event.organizationId,
+        eventType: event.eventType,
+        payload: event.payload,
+        createdAt: event.createdAt,
+        attempts: event.attempts,
+        publishedAt: event.publishedAt,
+        deadLetteredAt: null,
+        nextRetryAt: null,
+      });
+    }
   }
 }

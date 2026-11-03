@@ -254,6 +254,141 @@ describe('POST/GET /v1/invoices', () => {
   });
 });
 
+describe('public checkout', () => {
+  it('creates through the dev route, polls status, and shows paid only after the server confirms', async () => {
+    const { api } = app();
+    const created = await api.request('/api/dev/checkout/invoices', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'idempotency-key': 'idem_checkout_01',
+      },
+      body: JSON.stringify(invoiceBody),
+    });
+    expect(created.status).toBe(201);
+    const checkout = (await created.json()) as Record<string, unknown>;
+    expect(checkout.status).toBe('waiting');
+    expect(Object.keys(checkout).sort()).toEqual(
+      [
+        'actually_paid',
+        'description',
+        'expires_at',
+        'late_payment_review',
+        'livemode',
+        'merchant_name',
+        'network',
+        'object',
+        'overpaid',
+        'pay_address',
+        'pay_amount',
+        'pay_currency',
+        'price_amount',
+        'price_currency',
+        'public_id',
+        'status',
+      ].sort(),
+    );
+    expect(JSON.stringify(checkout)).not.toMatch(
+      /provider_payment|organization_id|ipn|secret|api_key/i,
+    );
+    expect(created.headers.get('authorization')).toBeNull();
+
+    const other = await postInvoice(api, SIMULATION_API_KEYS.beta, 'idem_checkout_beta', {
+      ...invoiceBody,
+      order_id: 'beta_hidden',
+    });
+    const beta = (await other.json()) as { pay_address: string };
+    const polled = await api.request(`/v1/checkout/${String(checkout.public_id)}`);
+    expect(polled.status).toBe(200);
+    const waiting = (await polled.json()) as { status: string; pay_address: string };
+    expect(waiting.status).toBe('waiting');
+    expect(waiting.pay_address).not.toBe(beta.pay_address);
+
+    const simulated = await api.request(
+      `/api/dev/checkout/${String(checkout.public_id)}/simulate`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ payment_status: 'finished' }),
+      },
+    );
+    expect(simulated.status).toBe(200);
+    const simulation = (await simulated.json()) as { simulated: boolean; status?: string };
+    expect(simulation.simulated).toBe(true);
+    expect(simulation.status).toBeUndefined();
+
+    const confirmed = await api.request(`/v1/checkout/${String(checkout.public_id)}`);
+    const paid = (await confirmed.json()) as { status: string };
+    expect(paid.status).toBe('paid');
+  });
+
+  it('keeps dev simulation off outside dev and echoes only the checkout origin', async () => {
+    const closed = createApp({
+      db: new MemoryDatabase(),
+      environment: 'test',
+      allowedModesRaw: 'mock',
+      checkoutBaseUrl: 'https://staging.airexpay.com',
+    });
+    const hidden = await closed.request('/api/dev/checkout/invoices', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'idempotency-key': 'idem_hidden_1' },
+      body: JSON.stringify(invoiceBody),
+    });
+    expect(hidden.status).toBe(404);
+
+    const open = createApp({
+      db: new MemoryDatabase(),
+      environment: 'dev',
+      allowedModesRaw: 'mock',
+      checkoutBaseUrl: 'https://staging.airexpay.com',
+    });
+    const allowed = await open.request('/health', {
+      headers: { origin: 'https://staging.airexpay.com' },
+    });
+    expect(allowed.headers.get('access-control-allow-origin')).toBe('https://staging.airexpay.com');
+    const blocked = await open.request('/health', { headers: { origin: 'https://evil.example' } });
+    expect(blocked.headers.get('access-control-allow-origin')).toBeNull();
+  });
+
+  it('records a rejected transition without changing the invoice', async () => {
+    const { api, db } = app();
+    const created = await postInvoice(
+      api,
+      SIMULATION_API_KEYS.alpha,
+      'idem_reject_01',
+      invoiceBody,
+    );
+    const invoice = (await created.json()) as {
+      id: string;
+      pay_amount: string;
+      payment: { provider_payment_id: string };
+    };
+    const signed = await signNowPaymentsBody(
+      {
+        payment_id: invoice.payment.provider_payment_id,
+        payment_status: 'refunded',
+        pay_amount: invoice.pay_amount,
+        actually_paid: '0',
+      },
+      'simulation-ipn-secret',
+    );
+    const response = await api.request('/api/webhooks/nowpayments', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-nowpayments-sig': signed.signature },
+      body: signed.rawBody,
+    });
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { applied: boolean; reason: string };
+    expect(body.applied).toBe(false);
+    expect(body.reason).toBe('forbidden_transition');
+    const view = await api.request(`/v1/invoices/${invoice.id}`, {
+      headers: { authorization: `Bearer ${SIMULATION_API_KEYS.alpha}` },
+    });
+    expect(((await view.json()) as { status: string }).status).toBe('waiting');
+    expect(db.listAudits().some((row) => row.action === 'payment.transition_rejected')).toBe(true);
+  });
+});
+
 describe('health', () => {
   it('reports simulation mode', async () => {
     const { api } = app();

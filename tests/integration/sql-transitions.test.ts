@@ -1,47 +1,15 @@
-import { readFileSync } from 'node:fs';
 import { ALLOWED_TRANSITIONS } from '@airexpay/payment-core';
 import { PAYMENT_STATUSES, type PaymentStatus } from '@airexpay/shared';
-import { PGlite } from '@electric-sql/pglite';
 import { describe, expect, it } from 'vitest';
-
-const MIGRATION = readFileSync(
-  new URL('../../supabase/migrations/20261103120000_phase1_foundation.sql', import.meta.url),
-  'utf8',
-);
-
-const AUTH_STUB = `
-  create schema if not exists auth;
-  create table if not exists auth.users (
-    id uuid primary key,
-    email text
-  );
-  create or replace function auth.uid() returns uuid
-  language sql stable as $$
-    select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
-  $$;
-  do $$
-  begin
-    if not exists (select 1 from pg_roles where rolname = 'anon') then
-      create role anon nologin;
-    end if;
-    if not exists (select 1 from pg_roles where rolname = 'authenticated') then
-      create role authenticated nologin;
-    end if;
-  end $$;
-  grant anon to current_user;
-  grant authenticated to current_user;
-`;
+import { embeddedDatabase } from '../helpers/database.ts';
 
 const ORG_A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const ORG_B = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const USER_A = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const USER_B = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 
-async function database(): Promise<PGlite> {
-  const db = new PGlite();
-  await db.exec(AUTH_STUB);
-  await db.exec(MIGRATION);
-  return db;
+async function database() {
+  return embeddedDatabase();
 }
 
 describe('phase 1 SQL migration', () => {
@@ -114,6 +82,7 @@ describe('phase 1 SQL migration', () => {
     `);
 
     let n = 0;
+    let forbidden = 0;
     for (const from of PAYMENT_STATUSES) {
       for (const to of PAYMENT_STATUSES) {
         n += 1;
@@ -147,7 +116,13 @@ describe('phase 1 SQL migration', () => {
             expect(invoice.rows[0]?.status).toBe('underpaid');
           }
         } else {
-          await expect(db.query(sql), `${from} -> ${to}`).rejects.toThrow(/forbidden transition/);
+          forbidden += 1;
+          const result = await db.query<{ apply_payment_event: string | null }>(sql);
+          expect(result.rows[0]?.apply_payment_event ?? null, `${from} -> ${to}`).toBeNull();
+          const status = await db.query<{ status: string }>(
+            `select status::text as status from public.payments where id = '${paymentId}'`,
+          );
+          expect(status.rows[0]?.status, `${from} -> ${to}`).toBe(from);
         }
       }
     }
@@ -159,6 +134,12 @@ describe('phase 1 SQL migration', () => {
       (ALLOWED_TRANSITIONS[from] as readonly PaymentStatus[]).includes('finished'),
     ).length;
     expect(fulfillment.rows[0]?.count).toBe(String(finishedTransitions));
+
+    const audits = await db.query<{ count: string }>(
+      `select count(*)::text as count from public.audit_logs where action = 'payment.transition_rejected'`,
+    );
+    expect(audits.rows[0]?.count).toBe(String(forbidden));
+    expect(forbidden).toBeGreaterThan(0);
   });
 
   it('isolates invoice reads by organization membership', async () => {

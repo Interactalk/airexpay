@@ -4,11 +4,11 @@ import { Link } from 'react-router-dom';
 const included = [
   {
     title: 'Simulated invoices',
-    body: 'Create an invoice against the in-memory mock provider. Amounts stay decimal strings.',
+    body: 'Create an invoice through the simulation API. Amounts stay decimal strings.',
   },
   {
     title: 'Hosted checkout preview',
-    body: 'Review waiting, confirming, paid, underpaid, expired, and failed without sending coins.',
+    body: 'The checkout page polls a public read-only endpoint. Paid appears only after the server says so.',
   },
   {
     title: 'Signed status updates',
@@ -38,7 +38,7 @@ export function LandingPage() {
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Button asChild>
-            <Link to="/pay/demo/waiting">Open a simulated checkout</Link>
+            <Link to="/pay">Create a simulated invoice</Link>
           </Button>
           <Button variant="outline" asChild>
             <a href="#boundaries">What this release is not</a>

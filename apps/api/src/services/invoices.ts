@@ -11,17 +11,18 @@ import {
   type CreateInvoiceBody,
 } from '@airexpay/validation';
 import type { Context } from 'hono';
-import type { MemoryDatabase } from '../db/memory.ts';
+import type { InvoiceRecord, InvoiceRepository } from '../db/repository.ts';
 import { errorBody, logEvent } from '../http.ts';
 
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
 
 export interface InvoiceDeps {
-  db: MemoryDatabase;
+  db: InvoiceRepository;
   ipnSecret: string;
   allowedModes: readonly ProviderMode[];
   modeAEnv: string | undefined;
   checkoutBaseUrl: string;
+  environment: string;
 }
 
 export function organizationForApiKey(token: string): string | null {
@@ -36,7 +37,7 @@ function readBearer(header: string | undefined): string | null {
   return match?.[1] ?? null;
 }
 
-export function invoiceJson(record: ReturnType<MemoryDatabase['createInvoice']>) {
+export function invoiceJson(record: InvoiceRecord) {
   return {
     id: record.id,
     public_id: record.publicId,
@@ -113,7 +114,7 @@ export async function createInvoice(c: Context, deps: InvoiceDeps): Promise<Resp
   const requestHash = JSON.stringify(body);
   const now = new Date();
   const nowIso = now.toISOString();
-  const existing = deps.db.getIdempotency(organizationId, keyParsed.data, nowIso);
+  const existing = await deps.db.getIdempotency(organizationId, keyParsed.data, nowIso);
   if (existing) {
     if (existing.requestHash !== requestHash) {
       return c.json(
@@ -161,7 +162,7 @@ export async function createInvoice(c: Context, deps: InvoiceDeps): Promise<Resp
   });
   const raw = payment.raw as { invoice_id?: string; network?: string };
   const publicId = newPublicId('inv');
-  const record = deps.db.createInvoice({
+  const record = await deps.db.createInvoice({
     organizationId,
     publicId,
     priceAmount: body.price_amount,
@@ -179,7 +180,7 @@ export async function createInvoice(c: Context, deps: InvoiceDeps): Promise<Resp
     network: raw.network ?? null,
   });
   const response = invoiceJson(record);
-  deps.db.saveIdempotency({
+  await deps.db.saveIdempotency({
     organizationId,
     key: keyParsed.data,
     requestHash,
@@ -198,7 +199,7 @@ export async function createInvoice(c: Context, deps: InvoiceDeps): Promise<Resp
   return c.json(response, 201);
 }
 
-export function getInvoice(c: Context, deps: InvoiceDeps): Response {
+export async function getInvoice(c: Context, deps: InvoiceDeps): Promise<Response> {
   const requestId = c.get('requestId') as string;
   const organizationId = organizationForApiKey(readBearer(c.req.header('authorization')) ?? '');
   if (!organizationId) {
@@ -214,7 +215,7 @@ export function getInvoice(c: Context, deps: InvoiceDeps): Response {
       404,
     );
   }
-  const record = deps.db.getInvoice(id, organizationId);
+  const record = await deps.db.getInvoice(id, organizationId);
   if (!record) {
     return c.json(
       errorBody(requestId, 'invalid_request_error', 'not_found', 'Invoice not found'),

@@ -1,18 +1,20 @@
 import {
   assertSimulationEnvironment,
   parseAllowedModes,
+  resolveCheckoutBaseUrl,
   SIMULATION_IPN_SECRET,
   type ProviderMode,
 } from '@airexpay/configuration';
 import { ProviderError } from '@airexpay/payment-core';
 import { Hono } from 'hono';
-import type { MemoryDatabase } from './db/memory.ts';
+import type { InvoiceRepository } from './db/repository.ts';
 import { errorBody, logEvent } from './http.ts';
+import { createDevCheckout, getPublicCheckout, simulateDevCheckout } from './services/checkout.ts';
 import { createInvoice, getInvoice, type InvoiceDeps } from './services/invoices.ts';
 import { handleNowPaymentsWebhook } from './services/webhooks.ts';
 
 export interface AppConfig {
-  db: MemoryDatabase;
+  db: InvoiceRepository;
   environment?: string | undefined;
   allowedModesRaw?: string | undefined;
   modeAEnv?: string | undefined;
@@ -23,14 +25,16 @@ export interface AppConfig {
 type AppVariables = { requestId: string };
 
 export function createApp(config: AppConfig) {
-  assertSimulationEnvironment(config.environment);
+  const environment = config.environment ?? 'dev';
+  assertSimulationEnvironment(environment);
   const allowedModes = parseAllowedModes(config.allowedModesRaw);
   const deps: InvoiceDeps = {
     db: config.db,
     ipnSecret: config.ipnSecret || SIMULATION_IPN_SECRET,
     allowedModes,
     modeAEnv: config.modeAEnv,
-    checkoutBaseUrl: config.checkoutBaseUrl ?? 'http://localhost:5173',
+    checkoutBaseUrl: resolveCheckoutBaseUrl(environment, config.checkoutBaseUrl),
+    environment,
   };
 
   const app = new Hono<{ Variables: AppVariables }>();
@@ -39,6 +43,21 @@ export function createApp(config: AppConfig) {
     const incoming = c.req.header('x-request-id');
     const requestId = incoming && incoming.length <= 200 ? incoming : crypto.randomUUID();
     c.set('requestId', requestId);
+    const origin = c.req.header('origin');
+    if (origin && origin === deps.checkoutBaseUrl) {
+      c.header('Access-Control-Allow-Origin', origin);
+      c.header('Vary', 'Origin');
+      c.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      c.header(
+        'Access-Control-Allow-Headers',
+        'authorization, content-type, idempotency-key, x-request-id',
+      );
+      c.header('Access-Control-Expose-Headers', 'x-request-id, idempotency-replayed');
+      c.header('Access-Control-Max-Age', '600');
+    }
+    if (c.req.method === 'OPTIONS') {
+      return c.body(null, 204);
+    }
     await next();
     c.header('X-Request-Id', requestId);
   });
@@ -61,8 +80,8 @@ export function createApp(config: AppConfig) {
     );
   });
 
-  app.get('/health', (c) => health(c, config.environment ?? 'dev', allowedModes));
-  app.get('/api/health', (c) => health(c, config.environment ?? 'dev', allowedModes));
+  app.get('/health', (c) => health(c, environment, allowedModes));
+  app.get('/api/health', (c) => health(c, environment, allowedModes));
 
   app.post('/api/webhooks/nowpayments', (c) =>
     handleNowPaymentsWebhook(c, { db: deps.db, ipnSecret: deps.ipnSecret }),
@@ -70,6 +89,14 @@ export function createApp(config: AppConfig) {
 
   app.post('/v1/invoices', (c) => createInvoice(c, deps));
   app.get('/v1/invoices/:id', (c) => getInvoice(c, deps));
+  app.get('/v1/checkout/:publicId', (c) => getPublicCheckout(c, deps));
+
+  app.post('/api/dev/checkout/invoices', (c) =>
+    createDevCheckout(c, deps, (request) => app.request(request)),
+  );
+  app.post('/api/dev/checkout/:publicId/simulate', (c) =>
+    simulateDevCheckout(c, deps, (request) => app.request(request)),
+  );
 
   app.notFound((c) => {
     const requestId = c.get('requestId') ?? crypto.randomUUID();
