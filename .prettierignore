@@ -1,8 +1,6 @@
-pnpm-lock.yaml
-dist
+design
+playwright-report
+test-results
 coverage
-.wrangler
-node_modules
-apps/api/worker-configuration.d.ts
-docs
-AGENTS.md
+dist
+pnpm-lock.yaml

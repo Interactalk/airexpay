@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.3 — 2026-11-03 (Asia/Dhaka, UTC+6)
+
+- Frontend follows design system v0.5 (`design/`): Inter for the interface, Newsreader for marketing headlines, ink-blue `#1e3a5f`. Outfit and the previous green accent are gone.
+- Dashboard shell, invoices, invoice detail, payment links, API keys, webhooks, settings, hosted checkout, landing, and a pricing placeholder. Dashboard figures are example data behind `apps/web/src/data`. Checkout status comes only from `GET /v1/checkout/{id}`.
+- Staging keeps the simulation banner. Production with an approved go-live review shows a Live mode pill beside the organization name. There is no underpaid override. Pricing has no amounts. Tap targets on the mobile dashboard are at least 44px, with `env(safe-area-inset-*)` padding.
+- Mode A stays off. No deploy, no Supabase changes, no live provider calls.
+
 ## 0.1.2 — 2026-11-03 (Asia/Dhaka, UTC+6)
 
 - Phase 1.2 simulation: `STORAGE_BACKEND=durable_object` implements the invoice repository on the SQLite `InvoiceStore` Durable Object (one object per organization, plus a directory and per-client rate objects). Dev and staging Wrangler configs declare the `INVOICE_STORE` binding. Unit tests stay on the in-memory repository.

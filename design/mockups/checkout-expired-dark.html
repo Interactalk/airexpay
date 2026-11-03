@@ -1,0 +1,34 @@
+<!doctype html><html lang="en" class="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Checkout — expired · AirExpay mockup</title><link rel="stylesheet" href="app.css"><style>
+body{background:hsl(var(--muted))}
+.ck{max-width:420px;margin:0 auto;padding:16px 16px 28px}
+.ckhead{display:flex;align-items:center;justify-content:space-between;padding:4px 2px 14px}
+.merchant{display:flex;align-items:center;gap:10px;font-weight:600}
+.panel{background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:var(--radius-xl);box-shadow:var(--shadow-sm);overflow:hidden}
+.pad{padding:20px}.hr{border-top:1px solid hsl(var(--border))}
+.amt{font-size:32px;font-weight:600;letter-spacing:-.02em}
+.qr{width:184px;height:184px;padding:12px;background:#fff;border:1px solid hsl(var(--border));border-radius:12px;margin:0 auto;display:block}
+.addr{display:flex;align-items:center;gap:8px;border:1px solid hsl(var(--input));border-radius:var(--radius);padding:10px 10px 10px 12px;background:hsl(var(--background))}
+.addr .mono{flex:1;word-break:break-all;font-size:12px;line-height:1.4}
+.icon-hero{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;margin:4px auto 12px}
+.foot{text-align:center;font-size:12px;color:hsl(var(--muted-foreground));margin-top:14px;display:flex;justify-content:center;gap:6px;align-items:center}
+.exnote{font-size:12px;text-align:center;margin-bottom:10px}
+.progress{height:6px;background:hsl(var(--muted));border-radius:99px;overflow:hidden}.progress>i{display:block;height:100%;background:hsl(var(--status-confirming-fg));border-radius:99px}
+.stepper{display:flex;gap:6px;font-size:12px}.stepper span{flex:1;padding-top:6px;border-top:3px solid hsl(var(--border));color:hsl(var(--muted-foreground))}.stepper span.on{border-color:hsl(var(--primary));color:hsl(var(--foreground));font-weight:500}
+.summary{display:none}
+@media (min-width:900px){
+ body{background:hsl(var(--background))}
+ .wrap{display:grid;grid-template-columns:1fr 1fr;min-height:100vh}
+ .summary{display:block;background:hsl(var(--muted));padding:72px 64px 40px;border-right:1px solid hsl(var(--border))}
+ .summary>div{max-width:440px;margin-left:auto}
+ .ck{padding:72px 64px;margin:0;max-width:none}.ck>*{max-width:440px}
+ .ck .ckhead{display:none}
+}
+</style></head><body><div class="wrap"><aside class="summary"><div><div class="merchant" style="margin-bottom:40px"><div class="av" style="width:30px;height:30px;font-size:13px;border-radius:7px">N</div>Northwind Studio</div>
+<div class="muted">Invoice INV-1046</div><div class="num" style="font-size:40px;font-weight:600;letter-spacing:-.02em;margin:6px 0 28px">420.00 USD</div>
+<div style="border-top:1px solid hsl(var(--border))"><div class="row between" style="padding:14px 0;border-bottom:1px solid hsl(var(--border))"><span>Brand identity package — example</span><span class="num">380.00</span></div><div class="row between" style="padding:14px 0;border-bottom:1px solid hsl(var(--border))"><span>Rush delivery — example</span><span class="num">40.00</span></div><div class="row between" style="padding:14px 0;font-weight:600"><span>Total</span><span class="num">420.00 USD</span></div></div>
+<p class="muted" style="font-size:13px;margin-top:28px">Payments go directly to a wallet controlled by Northwind Studio. AirExpay provides the payment software and does not hold funds.</p></div></aside><main class="ck"><div class="ckhead"><div class="merchant"><div class="av" style="width:30px;height:30px;font-size:13px;border-radius:7px">N</div>Northwind Studio</div><span class="muted num" style="font-size:12.5px">INV-1046</span></div><div class="exnote"><span class="example">Example — do not send funds</span></div><div class="panel"><div class="pad" style="text-align:center"><div class="icon-hero" style="background:hsl(var(--status-expired));color:hsl(var(--status-expired-fg))"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><span class="badge s-expired">Expired</span>
+<h2 style="font-size:20px;margin:12px 0 4px">This payment window has closed</h2><p class="muted" style="margin:0">The quote for this invoice expired at 13:45 (UTC+6). <b style="color:hsl(var(--foreground))">Do not send funds to the previous address.</b></p></div>
+<div class="hr pad"><div class="callout" style="margin-bottom:14px">Already sent a payment in the last few minutes? It may still be detected. Check again or contact the merchant with your transaction hash.</div>
+<span class="btn btn-primary btn-block btn-lg">Start a new payment</span><span class="btn btn-ghost btn-block" style="margin-top:6px">I already paid — check again</span></div></div>
+<div class="foot"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> Non-custodial checkout by <b style="color:hsl(var(--foreground))">AirExpay</b> · <a href="#" style="text-decoration:underline">Help</a></div></main></div></body></html>

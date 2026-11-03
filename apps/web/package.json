@@ -11,8 +11,6 @@
   "dependencies": {
     "@airexpay/shared": "workspace:*",
     "@airexpay/ui": "workspace:*",
-    "@fontsource/newsreader": "^5.2.8",
-    "@fontsource/outfit": "^5.2.8",
     "qrcode": "^1.5.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

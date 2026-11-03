@@ -2,33 +2,32 @@
 
 Updated: 2026-11-03 (Asia/Dhaka, UTC+6)
 
-| Field | Value |
-| --- | --- |
-| Project name | AirExpay |
-| Legal entity | AirexPay LLC |
-| Project stage | Phase 1.2 simulation (Durable Object storage, staging checkout routes, webhook secret encryption) |
-| Provider authorization | Pending confirmation (NOWPayments ToS §15.1 appears to exclude US entities) |
-| Development environment | Node 22, pnpm 10, local monorepo. No deploy. |
-| Database | Phase 1 migration is already on the dev project and was not edited. Later migrations were applied only to embedded Postgres in tests. Unit tests still default to the in-memory repository. Dev and staging Wrangler configs select `STORAGE_BACKEND=durable_object` with the `INVOICE_STORE` binding. Nothing was deployed and no hosted database was changed. |
-| Payment integration | Simulation mode. Mock provider, number-preserving IPN verifier, local outbox worker. Live calls disabled. |
-| Security audit | Pending |
-| Staging deployment | Not done. Not authorized by this change. Staging URLs are configured only: `https://staging.airexpay.com` and `https://api-staging.airexpay.com`. |
-| Production deployment | Not authorized |
-| Live transactions | Not authorized |
-| Current milestone | Phase 1.2 simulation |
+| Field                   | Value                                                                                                                                                                                                                                                                                                                                                           |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Project name            | AirExpay                                                                                                                                                                                                                                                                                                                                                        |
+| Legal entity            | AirexPay LLC                                                                                                                                                                                                                                                                                                                                                    |
+| Project stage           | Phase 1.2 simulation, with the v0.5 dashboard and checkout UI                                                                                                                                                                                                                                                                                                   |
+| Provider authorization  | Pending confirmation (NOWPayments ToS §15.1 appears to exclude US entities)                                                                                                                                                                                                                                                                                     |
+| Development environment | Node 22, pnpm 10, local monorepo. No deploy.                                                                                                                                                                                                                                                                                                                    |
+| Database                | Phase 1 migration is already on the dev project and was not edited. Later migrations were applied only to embedded Postgres in tests. Unit tests still default to the in-memory repository. Dev and staging Wrangler configs select `STORAGE_BACKEND=durable_object` with the `INVOICE_STORE` binding. Nothing was deployed and no hosted database was changed. |
+| Payment integration     | Simulation mode. Mock provider, number-preserving IPN verifier, local outbox worker. Live calls disabled.                                                                                                                                                                                                                                                       |
+| Security audit          | Pending                                                                                                                                                                                                                                                                                                                                                         |
+| Staging deployment      | Not done. Not authorized by this change. Staging URLs are configured only: `https://staging.airexpay.com` and `https://api-staging.airexpay.com`.                                                                                                                                                                                                               |
+| Production deployment   | Not authorized                                                                                                                                                                                                                                                                                                                                                  |
+| Live transactions       | Not authorized                                                                                                                                                                                                                                                                                                                                                  |
+| Current milestone       | Design system v0.5 frontend on the Phase 1.2 simulation API                                                                                                                                                                                                                                                                                                     |
 
 ## Evidence for this milestone
 
 Commands run locally on 2026-11-03:
 
-- `pnpm lint` — passed
+- `pnpm lint` — passed (one react-refresh warning in `theme.tsx`; Prettier check passed)
 - `pnpm typecheck` — passed
-- `pnpm test` — 12 files, 60 tests passed, 0 failed
+- `pnpm test` — 14 files, 73 tests passed, 0 failed
 - `pnpm build` — API bundle and web production build passed
+- `pnpm test:e2e` — 38 passed, 24 skipped. The skipped cases are the 390px checks on the desktop project. Mobile checks passed: six checkout states, server-polled status, `scrollWidth` equals 390, and dashboard tap targets at least 44px tall.
 
-The Durable Object tests use Wrangler's `createTestHarness`, which runs Miniflare. They create an invoice, evict the organization and directory objects, simulate a signed IPN, and read `paid` back from SQLite storage. Deleting that storage makes the checkout 404.
-
-Browser check from Phase 1.1 still applies to the local dev server. This milestone did not redeploy staging.
+Phase 1.2 Durable Object evidence still applies: Miniflare creates an invoice, evicts the organization and directory objects, simulates a signed IPN, and reads `paid` back from SQLite. This change does not redeploy staging and does not apply migrations.
 
 ## Staging Worker configuration (not applied by this change)
 
@@ -36,54 +35,55 @@ Browser check from Phase 1.1 still applies to the local dev server. This milesto
 
 Vars already in `wrangler.toml`:
 
-| Name | Value |
-| --- | --- |
-| `ENVIRONMENT` | `staging` |
-| `ALLOWED_MODES` | `mock` |
-| `NOWPAYMENTS_MODE_A_ENABLED` | `false` |
-| `LIVEMODE` | `false` |
-| `SIMULATION_IPN_SECRET` | `simulation-ipn-secret` (public placeholder) |
-| `SIMULATION_API_KEY` | `ak_test_simulation_alpha` (public placeholder) |
-| `STORAGE_BACKEND` | `durable_object` |
-| `PUBLIC_CHECKOUT_BASE_URL` | `https://staging.airexpay.com` |
-| `DATABASE_URL` | empty |
+| Name                         | Value                                           |
+| ---------------------------- | ----------------------------------------------- |
+| `ENVIRONMENT`                | `staging`                                       |
+| `ALLOWED_MODES`              | `mock`                                          |
+| `NOWPAYMENTS_MODE_A_ENABLED` | `false`                                         |
+| `LIVEMODE`                   | `false`                                         |
+| `SIMULATION_IPN_SECRET`      | `simulation-ipn-secret` (public placeholder)    |
+| `SIMULATION_API_KEY`         | `ak_test_simulation_alpha` (public placeholder) |
+| `STORAGE_BACKEND`            | `durable_object`                                |
+| `PUBLIC_CHECKOUT_BASE_URL`   | `https://staging.airexpay.com`                  |
+| `DATABASE_URL`               | empty                                           |
 
 Binding:
 
-| Binding | Class | Storage |
-| --- | --- | --- |
+| Binding         | Class          | Storage                                                                 |
+| --------------- | -------------- | ----------------------------------------------------------------------- |
 | `INVOICE_STORE` | `InvoiceStore` | SQLite (`migrations` tag `v1`, `new_sqlite_classes = ["InvoiceStore"]`) |
 
 Secret, set outside the repo before any merchant webhook endpoint is stored. Checkout simulation does not require it.
 
-| Secret | Required | Notes |
-| --- | --- | --- |
-| `WEBHOOK_SECRET_ENCRYPTION_KEY` | Before saving a webhook endpoint | `wrangler secret put WEBHOOK_SECRET_ENCRYPTION_KEY --env staging`. Base64 of 32 bytes. |
-| `WEBHOOK_SECRET_ENCRYPTION_KEY_PREVIOUS` | Only during rotation | Decrypt-only. Remove after endpoints are re-saved. |
+| Secret                                   | Required                         | Notes                                                                                  |
+| ---------------------------------------- | -------------------------------- | -------------------------------------------------------------------------------------- |
+| `WEBHOOK_SECRET_ENCRYPTION_KEY`          | Before saving a webhook endpoint | `wrangler secret put WEBHOOK_SECRET_ENCRYPTION_KEY --env staging`. Base64 of 32 bytes. |
+| `WEBHOOK_SECRET_ENCRYPTION_KEY_PREVIOUS` | Only during rotation             | Decrypt-only. Remove after endpoints are re-saved.                                     |
 
 No `NOWPAYMENTS_API_KEY`, no hosted `DATABASE_URL`, and no production environment. The dev Wrangler environment uses the same `INVOICE_STORE` binding with `STORAGE_BACKEND=durable_object` and `PUBLIC_CHECKOUT_BASE_URL=http://localhost:5173`.
 
 ## Tasks
 
-| Task | Status |
-| --- | --- |
-| 1.1 Environment inspection | COMPLETE (docs) |
-| 1.2 Environment audit doc | COMPLETE |
-| 2.1 Company identity | BLOCKED (details not supplied) |
-| 2.2 NOWPayments approval | BLOCKED (email drafted, not sent) |
-| 2.3 Legal research | IN PROGRESS (FinCEN/OFAC verified; counsel needed) |
-| 2.4 Integration model decision | BLOCKED (provider answer) |
-| 3 Product docs | COMPLETE (draft for owner review) |
-| 4 Architecture docs | COMPLETE (draft for owner review) |
-| 5.1 Monorepo, mock provider, state machine, IPN verifier | TESTED |
-| 5.2 Invoice API and webhook route | TESTED (memory and embedded Postgres) |
-| 5.3 SQL migrations and embedded Postgres checks | TESTED (new migrations included; not applied to the hosted dev project by this change) |
-| 5.4 Hosted checkout wired to the mock API | TESTED (browser flow recorded) |
-| 5.5 Hosted Supabase apply of new migrations, deploy, live provider | NOT STARTED (not authorized) |
-| 5.6 Merchant webhook outbox worker | TESTED locally only |
-| 5.7 Durable Object repository (`InvoiceStore`) | TESTED with Miniflare via Wrangler's local test harness. Not deployed. |
-| 5.8 Staging simulation checkout gate and rate limit | TESTED. Production config returns 404. Not deployed. |
-| 5.9 Merchant webhook secret AES-GCM | TESTED. `CREDENTIALS_KEK` for provider secrets is still not implemented. |
+| Task                                                               | Status                                                                                           |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| 1.1 Environment inspection                                         | COMPLETE (docs)                                                                                  |
+| 1.2 Environment audit doc                                          | COMPLETE                                                                                         |
+| 2.1 Company identity                                               | BLOCKED (details not supplied)                                                                   |
+| 2.2 NOWPayments approval                                           | BLOCKED (email drafted, not sent)                                                                |
+| 2.3 Legal research                                                 | IN PROGRESS (FinCEN/OFAC verified; counsel needed)                                               |
+| 2.4 Integration model decision                                     | BLOCKED (provider answer)                                                                        |
+| 3 Product docs                                                     | COMPLETE (draft for owner review)                                                                |
+| 4 Architecture docs                                                | COMPLETE (draft for owner review)                                                                |
+| 5.1 Monorepo, mock provider, state machine, IPN verifier           | TESTED                                                                                           |
+| 5.2 Invoice API and webhook route                                  | TESTED (memory and embedded Postgres)                                                            |
+| 5.3 SQL migrations and embedded Postgres checks                    | TESTED (new migrations included; not applied to the hosted dev project by this change)           |
+| 5.4 Hosted checkout wired to the mock API                          | TESTED (browser flow recorded)                                                                   |
+| 5.5 Hosted Supabase apply of new migrations, deploy, live provider | NOT STARTED (not authorized)                                                                     |
+| 5.6 Merchant webhook outbox worker                                 | TESTED locally only                                                                              |
+| 5.7 Durable Object repository (`InvoiceStore`)                     | TESTED with Miniflare via Wrangler's local test harness. Not deployed.                           |
+| 5.8 Staging simulation checkout gate and rate limit                | TESTED. Production config returns 404. Not deployed.                                             |
+| 5.9 Merchant webhook secret AES-GCM                                | TESTED. `CREDENTIALS_KEK` for provider secrets is still not implemented.                         |
+| 5.10 Design system v0.5 frontend                                   | TESTED locally. Dashboard data is example-only. Checkout polls the simulation API. Not deployed. |
 
 ## Decision requests for owner
 
