@@ -1,7 +1,11 @@
 import {
   assertLocalDatabaseUrl,
+  isExactlyMockMode,
+  parseAllowedModes,
+  parseLivemode,
   resolveCheckoutBaseUrl,
   resolveStorageBackend,
+  simulationCheckoutAllowed,
   stagingApiOrigin,
   stagingCheckoutOrigin,
 } from '@airexpay/configuration';
@@ -35,6 +39,8 @@ describe('storage backend selection', () => {
       /localhost/,
     );
     expect(() => resolveStorageBackend('sqlite')).toThrow(/Unknown STORAGE_BACKEND/);
+    expect(resolveStorageBackend('durable_object')).toBe('durable_object');
+    expect(() => selectRepository({ storageBackend: 'durable_object' })).toThrow(/INVOICE_STORE/);
   });
 
   it('accepts an injected localhost client without dialing', () => {
@@ -54,6 +60,31 @@ describe('storage backend selection', () => {
       sql,
     });
     expect(selected).toBeInstanceOf(PostgresRepository);
+  });
+});
+
+describe('simulation checkout access', () => {
+  it('allows dev, and staging only when the mode list is exactly mock and livemode is false', () => {
+    expect(parseLivemode(undefined)).toBe(false);
+    expect(parseLivemode('false')).toBe(false);
+    expect(parseLivemode('true')).toBe(true);
+    expect(isExactlyMockMode(parseAllowedModes('mock'))).toBe(true);
+    expect(isExactlyMockMode(parseAllowedModes('mock,mock'))).toBe(true);
+    expect(isExactlyMockMode(parseAllowedModes('mock,nowpayments_direct'))).toBe(false);
+    const allow = (environment: string, modes: string, livemode: boolean) =>
+      simulationCheckoutAllowed({
+        environment,
+        allowedModes: parseAllowedModes(modes),
+        livemode,
+      });
+    expect(allow('dev', 'mock', false)).toBe(true);
+    expect(allow('staging', 'mock', false)).toBe(true);
+    expect(allow('staging', 'mock,nowpayments_direct', false)).toBe(false);
+    expect(allow('staging', 'nowpayments_direct', false)).toBe(false);
+    expect(allow('staging', 'mock', true)).toBe(false);
+    expect(allow('dev', 'mock', true)).toBe(false);
+    expect(allow('production', 'mock', false)).toBe(false);
+    expect(allow('test', 'mock', false)).toBe(false);
   });
 });
 

@@ -1,17 +1,29 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
-import { resolveCheckoutBaseUrl } from '@airexpay/configuration';
+import {
+  assertSimulationEnvironment,
+  parseLivemode,
+  resolveCheckoutBaseUrl,
+} from '@airexpay/configuration';
+import { webhookKeyring } from '@airexpay/payment-core';
 import { createApp } from './app.ts';
 import { MemoryDatabase } from './db/memory.ts';
 
 const port = Number(process.env.PORT ?? 8787);
 const environment = process.env.ENVIRONMENT ?? 'dev';
+assertSimulationEnvironment(environment);
 const app = createApp({
-  db: new MemoryDatabase(),
+  db: new MemoryDatabase(
+    webhookKeyring(
+      process.env.WEBHOOK_SECRET_ENCRYPTION_KEY,
+      process.env.WEBHOOK_SECRET_ENCRYPTION_KEY_PREVIOUS,
+    ),
+  ),
   environment,
   allowedModesRaw: process.env.ALLOWED_MODES ?? 'mock',
   modeAEnv: process.env.NOWPAYMENTS_MODE_A_ENABLED ?? 'false',
   ipnSecret: process.env.SIMULATION_IPN_SECRET,
   checkoutBaseUrl: resolveCheckoutBaseUrl(environment, process.env.PUBLIC_CHECKOUT_BASE_URL),
+  livemode: parseLivemode(process.env.LIVEMODE),
 });
 
 const server = createServer((req, res) => {

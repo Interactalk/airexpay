@@ -1,6 +1,13 @@
 import { SIMULATION_ORG_IDS } from '@airexpay/configuration';
 import type { AuditRecord, PaymentSnapshot, TransitionResult } from '@airexpay/payment-core';
-import { applyPaymentTransition, emptyPaymentSnapshot } from '@airexpay/payment-core';
+import {
+  applyPaymentTransition,
+  decryptWebhookSecret,
+  emptyPaymentSnapshot,
+  encryptWebhookSecret,
+  requireWebhookKey,
+  type WebhookSecretKeyring,
+} from '@airexpay/payment-core';
 import type {
   AcceptWebhookInput,
   AcceptWebhookResult,
@@ -13,6 +20,27 @@ import type {
   WebhookEndpointRecord,
   WebhookRecord,
 } from './repository.ts';
+
+interface StoredEndpoint {
+  id: string;
+  organizationId: string;
+  url: string;
+  secretCiphertext: string;
+  events: string[];
+  active: boolean;
+}
+
+export interface MemorySnapshot {
+  invoiceSequence: number;
+  invoices: InvoiceRecord[];
+  snapshots: Array<[string, PaymentSnapshot]>;
+  webhooks: WebhookRecord[];
+  idempotency: IdempotencyRecord[];
+  endpoints: StoredEndpoint[];
+  outbox: OutboxRecord[];
+  deliveries: DeliveryInput[];
+  audits: AuditRecord[];
+}
 
 export type {
   AcceptWebhookInput,
@@ -29,6 +57,17 @@ function merchantNameFor(organizationId: string): string {
   return 'Merchant';
 }
 
+function toEndpointRecord(row: StoredEndpoint, secret: string): WebhookEndpointRecord {
+  return {
+    id: row.id,
+    organizationId: row.organizationId,
+    url: row.url,
+    secret,
+    events: [...row.events],
+    active: row.active,
+  };
+}
+
 export class MemoryDatabase implements InvoiceRepository {
   private readonly invoices = new Map<string, InvoiceRecord>();
   private readonly byPublicId = new Map<string, string>();
@@ -37,10 +76,54 @@ export class MemoryDatabase implements InvoiceRepository {
   private readonly webhooks = new Map<string, WebhookRecord>();
   private readonly idempotency = new Map<string, IdempotencyRecord>();
   private readonly audits: AuditRecord[] = [];
-  private readonly endpoints = new Map<string, WebhookEndpointRecord>();
+  private readonly endpoints = new Map<string, StoredEndpoint>();
   private readonly outbox = new Map<string, OutboxRecord>();
   private readonly deliveries: DeliveryInput[] = [];
   private invoiceSequence = 1000;
+
+  constructor(private readonly webhookKeys: WebhookSecretKeyring = {}) {}
+
+  /** Plain JSON state. Webhook secrets in this object are ciphertext, not the signing secret. */
+  snapshot(): MemorySnapshot {
+    return {
+      invoiceSequence: this.invoiceSequence,
+      invoices: [...this.invoices.values()].map((row) => structuredClone(row)),
+      snapshots: [...this.snapshots.entries()].map(
+        ([id, snapshot]) => [id, structuredClone(snapshot)] as [string, PaymentSnapshot],
+      ),
+      webhooks: [...this.webhooks.values()].map((row) => structuredClone(row)),
+      idempotency: [...this.idempotency.values()].map((row) => structuredClone(row)),
+      endpoints: [...this.endpoints.values()].map((row) => structuredClone(row)),
+      outbox: [...this.outbox.values()].map((row) => structuredClone(row)),
+      deliveries: this.deliveries.map((row) => structuredClone(row)),
+      audits: this.audits.map((row) => structuredClone(row)),
+    };
+  }
+
+  static fromSnapshot(
+    snapshot: MemorySnapshot | undefined,
+    keys: WebhookSecretKeyring = {},
+  ): MemoryDatabase {
+    const db = new MemoryDatabase(keys);
+    if (!snapshot) return db;
+    const copy = structuredClone(snapshot);
+    db.invoiceSequence = copy.invoiceSequence;
+    for (const invoice of copy.invoices) {
+      db.invoices.set(invoice.id, invoice);
+      db.byPublicId.set(invoice.publicId, invoice.id);
+      db.byProviderPayment.set(invoice.providerPaymentId, invoice.id);
+    }
+    for (const [id, payment] of copy.snapshots) db.snapshots.set(id, payment);
+    for (const webhook of copy.webhooks) db.webhooks.set(webhook.dedupeKey, webhook);
+    for (const row of copy.idempotency) {
+      db.idempotency.set(`${row.organizationId}:${row.key}`, row);
+    }
+    for (const endpoint of copy.endpoints) db.endpoints.set(endpoint.id, endpoint);
+    for (const event of copy.outbox) db.outbox.set(event.id, event);
+    db.deliveries.push(...copy.deliveries);
+    db.audits.push(...copy.audits);
+    return db;
+  }
 
   listWebhooks(): readonly WebhookRecord[] {
     return [...this.webhooks.values()];
@@ -205,30 +288,44 @@ export class MemoryDatabase implements InvoiceRepository {
     return { duplicate: false, webhook, transition, matched };
   }
 
-  saveWebhookEndpoint(input: {
+  async saveWebhookEndpoint(input: {
     id?: string;
     organizationId: string;
     url: string;
     secret: string;
     events: string[];
     active?: boolean;
-  }): WebhookEndpointRecord {
-    const record: WebhookEndpointRecord = {
+  }): Promise<WebhookEndpointRecord> {
+    const record: StoredEndpoint = {
       id: input.id ?? crypto.randomUUID(),
       organizationId: input.organizationId,
       url: input.url,
-      secret: input.secret,
+      secretCiphertext: await encryptWebhookSecret(
+        input.secret,
+        requireWebhookKey(this.webhookKeys),
+      ),
       events: [...input.events],
       active: input.active ?? true,
     };
     this.endpoints.set(record.id, record);
-    return record;
+    return toEndpointRecord(record, input.secret);
   }
 
-  listEndpoints(organizationId: string): readonly WebhookEndpointRecord[] {
-    return [...this.endpoints.values()].filter(
+  async listEndpoints(organizationId: string): Promise<readonly WebhookEndpointRecord[]> {
+    const rows = [...this.endpoints.values()].filter(
       (endpoint) => endpoint.organizationId === organizationId && endpoint.active,
     );
+    const key = requireWebhookKey(this.webhookKeys);
+    const listed: WebhookEndpointRecord[] = [];
+    for (const row of rows) {
+      listed.push(
+        toEndpointRecord(
+          row,
+          await decryptWebhookSecret(row.secretCiphertext, key, this.webhookKeys.previous),
+        ),
+      );
+    }
+    return listed;
   }
 
   listDueOutbox(nowIso: string, limit: number, maxAttempts: number): readonly OutboxRecord[] {

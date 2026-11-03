@@ -1,9 +1,10 @@
-import { SIMULATION_API_KEYS } from '@airexpay/configuration';
+import { SIMULATION_API_KEYS, simulationCheckoutAllowed } from '@airexpay/configuration';
 import { signNowPaymentsBody } from '@airexpay/payment-core';
 import { divideDecimal, isPaymentStatus } from '@airexpay/shared';
 import type { Context } from 'hono';
 import type { InvoiceRecord } from '../db/repository.ts';
 import { errorBody } from '../http.ts';
+import { simulationClientKey } from '../rate-limit.ts';
 import type { InvoiceDeps } from './invoices.ts';
 
 export function toPublicCheckout(record: InvoiceRecord) {
@@ -45,13 +46,41 @@ export async function getPublicCheckout(c: Context, deps: InvoiceDeps): Promise<
   return c.json(toPublicCheckout(record), 200);
 }
 
+async function rejectSimulation(c: Context, deps: InvoiceDeps): Promise<Response | null> {
+  const requestId = c.get('requestId') as string;
+  if (
+    !simulationCheckoutAllowed({
+      environment: deps.environment,
+      allowedModes: deps.allowedModes,
+      livemode: deps.livemode,
+    })
+  ) {
+    return notFound(c, requestId);
+  }
+  const decision = await deps.rateLimit.take(simulationClientKey(c.req.raw.headers), Date.now());
+  if (!decision.allowed) {
+    c.header('Retry-After', String(decision.retryAfterSeconds));
+    return c.json(
+      errorBody(
+        requestId,
+        'rate_limit_error',
+        'rate_limited',
+        'Too many simulation checkout requests',
+      ),
+      429,
+    );
+  }
+  return null;
+}
+
 export async function createDevCheckout(
   c: Context,
   deps: InvoiceDeps,
   forward: (request: Request) => Response | Promise<Response>,
 ): Promise<Response> {
   const requestId = c.get('requestId') as string;
-  if (deps.environment !== 'dev') return notFound(c, requestId);
+  const rejected = await rejectSimulation(c, deps);
+  if (rejected) return rejected;
   let payload: unknown;
   try {
     payload = await c.req.json();
@@ -105,7 +134,8 @@ export async function simulateDevCheckout(
   forward: (request: Request) => Response | Promise<Response>,
 ): Promise<Response> {
   const requestId = c.get('requestId') as string;
-  if (deps.environment !== 'dev') return notFound(c, requestId);
+  const rejected = await rejectSimulation(c, deps);
+  if (rejected) return rejected;
   const publicId = c.req.param('publicId');
   if (!publicId) return notFound(c, requestId);
   const record = await deps.db.getByPublicId(publicId);

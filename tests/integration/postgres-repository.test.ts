@@ -7,6 +7,7 @@ import { PostgresRepository } from '../../apps/api/src/db/postgres.ts';
 import type { SqlPool } from '../../apps/api/src/db/repository.ts';
 import { runOutboxWorker } from '../../apps/api/src/services/outbox-worker.ts';
 import { embeddedDatabase } from '../helpers/database.ts';
+import { TEST_WEBHOOK_KEYS } from '../helpers/webhook-key.ts';
 
 function asSqlPool(db: PGlite): SqlPool {
   return {
@@ -28,7 +29,7 @@ async function seeded() {
       ($2::uuid, 'Beta LLC', 'Harbor Goods')`,
     [SIMULATION_ORG_IDS.alpha, SIMULATION_ORG_IDS.beta],
   );
-  const db = new PostgresRepository(asSqlPool(pg));
+  const db = new PostgresRepository(asSqlPool(pg), TEST_WEBHOOK_KEYS);
   const api = createApp({
     db,
     environment: 'dev',
@@ -199,6 +200,14 @@ describe('postgres repository', () => {
         calls[0]?.header ?? '',
       ),
     ).toBe(true);
+    const stored = await pg.query<{ secret: string }>(
+      `select convert_from(secret_ciphertext, 'UTF8') as secret
+       from public.webhook_endpoints where id = $1::uuid`,
+      [endpoint.id],
+    );
+    const ciphertext = stored.rows[0]?.secret ?? '';
+    expect(ciphertext.startsWith('v1.')).toBe(true);
+    expect(ciphertext).not.toContain('merchant-webhook-secret');
 
     const past = new Date(Date.now() - 1000).toISOString();
     await db.saveIdempotency({

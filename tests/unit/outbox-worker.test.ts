@@ -7,6 +7,7 @@ import {
 import { describe, expect, it } from 'vitest';
 import { MemoryDatabase } from '../../apps/api/src/db/memory.ts';
 import { runOutboxWorker } from '../../apps/api/src/services/outbox-worker.ts';
+import { TEST_WEBHOOK_KEYS } from '../helpers/webhook-key.ts';
 
 const SECRET = 'merchant-webhook-secret';
 
@@ -33,7 +34,7 @@ describe('merchant webhook signatures', () => {
 
 describe('outbox worker', () => {
   it('delivers once, retries, and dead-letters without calling the network itself', async () => {
-    const db = new MemoryDatabase();
+    const db = new MemoryDatabase(TEST_WEBHOOK_KEYS);
     const invoice = db.createInvoice({
       organizationId: '11111111-1111-4111-8111-111111111111',
       publicId: 'inv_outbox',
@@ -63,7 +64,7 @@ describe('outbox worker', () => {
       payAmount: invoice.payAmount,
       reason: null,
     });
-    const endpoint = db.saveWebhookEndpoint({
+    const endpoint = await db.saveWebhookEndpoint({
       organizationId: invoice.organizationId,
       url: 'https://merchant.example/hooks',
       secret: SECRET,
@@ -98,7 +99,7 @@ describe('outbox worker', () => {
     expect(again.delivered).toBe(0);
     expect(calls).toHaveLength(1);
 
-    const failing = new MemoryDatabase();
+    const failing = new MemoryDatabase(TEST_WEBHOOK_KEYS);
     const second = failing.createInvoice({
       organizationId: invoice.organizationId,
       publicId: 'inv_fail',
@@ -128,7 +129,7 @@ describe('outbox worker', () => {
       payAmount: second.payAmount,
       reason: null,
     });
-    failing.saveWebhookEndpoint({
+    await failing.saveWebhookEndpoint({
       organizationId: second.organizationId,
       url: 'https://merchant.example/hooks',
       secret: SECRET,
