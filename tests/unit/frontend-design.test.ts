@@ -46,16 +46,25 @@ describe('design rules', () => {
       live: false,
       banner: true,
       review: 'approved',
+      onboardingApproved: false,
     });
     expect(resolveChrome('staging', null)).toEqual({
       live: false,
       banner: true,
       review: 'pending',
+      onboardingApproved: false,
     });
     expect(resolveChrome('production', 'rejected')).toEqual({
+      live: false,
+      banner: true,
+      review: 'rejected',
+      onboardingApproved: false,
+    });
+    expect(resolveChrome('production', 'approved', true)).toEqual({
       live: true,
       banner: false,
       review: 'approved',
+      onboardingApproved: true,
     });
     expect(preservedQuery('?environment=production&theme=dark&x=1')).toBe(
       '?environment=production&theme=dark',

@@ -1,16 +1,21 @@
 import {
   parseAllowedModes,
   resolveCheckoutBaseUrl,
+  simulationCheckoutAllowed,
   SIMULATION_IPN_SECRET,
   type ProviderMode,
 } from '@airexpay/configuration';
-import { ProviderError } from '@airexpay/payment-core';
+import { ProviderError, randomDocumentKey } from '@airexpay/payment-core';
 import { Hono } from 'hono';
+import { MemoryDatabase } from './db/memory.ts';
+import type { OnboardingSnapshot } from './db/onboarding-store.ts';
 import type { InvoiceRepository } from './db/repository.ts';
 import { errorBody, logEvent } from './http.ts';
 import { MemoryRateLimiter, type SimulationRateLimit } from './rate-limit.ts';
 import { createDevCheckout, getPublicCheckout, simulateDevCheckout } from './services/checkout.ts';
 import { createInvoice, getInvoice, type InvoiceDeps } from './services/invoices.ts';
+import { handleOnboarding } from './services/onboarding-routes.ts';
+import type { OnboardingDeps } from './services/onboarding.ts';
 import { handleNowPaymentsWebhook } from './services/webhooks.ts';
 
 export interface AppConfig {
@@ -22,6 +27,10 @@ export interface AppConfig {
   checkoutBaseUrl?: string | undefined;
   livemode?: boolean | undefined;
   rateLimit?: SimulationRateLimit | undefined;
+  onboardingStore?: MemoryDatabase | undefined;
+  loadOnboarding?: (() => Promise<OnboardingSnapshot>) | undefined;
+  saveOnboarding?: ((snapshot: OnboardingSnapshot) => Promise<void>) | undefined;
+  documentKey?: string | undefined;
 }
 
 type AppVariables = { requestId: string };
@@ -102,6 +111,24 @@ export function createApp(config: AppConfig) {
     simulateDevCheckout(c, deps, (request) => app.request(request)),
   );
 
+  const onboarding = onboardingDeps(config, allowedModes, livemode, environment);
+  app.post('/v1/onboarding/signup', (c) => handleOnboarding(c, onboarding, 'signup'));
+  app.post('/v1/onboarding/verify-email', (c) => handleOnboarding(c, onboarding, 'verify'));
+  app.get('/v1/onboarding', (c) => handleOnboarding(c, onboarding, 'get'));
+  app.patch('/v1/onboarding/steps/:step', (c) => handleOnboarding(c, onboarding, 'step'));
+  app.post('/v1/onboarding/documents', (c) => handleOnboarding(c, onboarding, 'upload'));
+  app.get('/v1/onboarding/documents/:documentId', (c) =>
+    handleOnboarding(c, onboarding, 'download'),
+  );
+  app.post('/v1/onboarding/submit', (c) => handleOnboarding(c, onboarding, 'submit'));
+  app.post('/v1/onboarding/resubmit', (c) => handleOnboarding(c, onboarding, 'resubmit'));
+  app.post('/api/dev/onboarding/admin-session', (c) =>
+    handleOnboarding(c, onboarding, 'admin-session'),
+  );
+  app.post('/api/dev/onboarding/:organizationId/simulate', (c) =>
+    handleOnboarding(c, onboarding, 'simulate'),
+  );
+
   app.notFound((c) => {
     const requestId = c.get('requestId') ?? crypto.randomUUID();
     return c.json(
@@ -111,6 +138,27 @@ export function createApp(config: AppConfig) {
   });
 
   return app;
+}
+
+let ephemeralDocumentKey: string | undefined;
+
+function onboardingDeps(
+  config: AppConfig,
+  allowedModes: readonly ProviderMode[],
+  livemode: boolean,
+  environment: string,
+): OnboardingDeps {
+  const store =
+    config.onboardingStore ??
+    (config.db instanceof MemoryDatabase ? config.db : new MemoryDatabase());
+  if (!config.documentKey) ephemeralDocumentKey ??= randomDocumentKey();
+  return {
+    db: store,
+    documentKey: config.documentKey ?? ephemeralDocumentKey ?? randomDocumentKey(),
+    simulation: simulationCheckoutAllowed({ environment, allowedModes, livemode }),
+    ...(config.loadOnboarding ? { load: config.loadOnboarding } : {}),
+    ...(config.saveOnboarding ? { save: config.saveOnboarding } : {}),
+  };
 }
 
 function health(

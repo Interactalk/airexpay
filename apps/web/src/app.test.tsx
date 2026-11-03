@@ -31,9 +31,9 @@ describe('dashboard and marketing pages', () => {
     cleanup();
 
     renderAt('/dashboard/api-keys/approved?environment=production');
-    expect(screen.queryByTestId('simulation-banner')).toBeNull();
-    expect(screen.getAllByTestId('live-mode-pill').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Approved').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('simulation-banner')).toBeTruthy();
+    expect(screen.queryByTestId('live-mode-pill')).toBeNull();
+    expect(screen.getByTestId('go-live-locked')).toBeTruthy();
     expect(screen.queryByRole('button', { name: /create live key/i })).toBeNull();
   });
 

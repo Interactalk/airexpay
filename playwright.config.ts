@@ -14,7 +14,37 @@ export default defineConfig({
     timeout: 180_000,
   },
   projects: [
-    { name: 'desktop', use: { viewport: { width: 1440, height: 900 } } },
-    { name: 'mobile', use: { viewport: { width: 390, height: 844 } } },
+    {
+      name: 'desktop',
+      testIgnore: /onboarding-camera/,
+      use: { viewport: { width: 1440, height: 900 } },
+    },
+    {
+      name: 'mobile',
+      testIgnore: /onboarding-camera/,
+      use: { viewport: { width: 390, height: 844 } },
+    },
+    {
+      name: 'camera-allow',
+      testMatch: /onboarding-camera/,
+      grep: /allows the camera/,
+      use: {
+        viewport: { width: 1280, height: 800 },
+        launchOptions: {
+          args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'],
+        },
+      },
+    },
+    {
+      name: 'camera-deny',
+      testMatch: /onboarding-camera/,
+      grep: /denies the camera/,
+      use: {
+        viewport: { width: 1280, height: 800 },
+        launchOptions: {
+          args: ['--use-fake-device-for-media-stream', '--deny-permission-prompts'],
+        },
+      },
+    },
   ],
 });

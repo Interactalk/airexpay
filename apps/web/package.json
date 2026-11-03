@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@airexpay/shared": "workspace:*",
+    "@airexpay/validation": "workspace:*",
     "@airexpay/ui": "workspace:*",
     "qrcode": "^1.5.4",
     "react": "^19.2.0",

@@ -99,6 +99,9 @@ importers:
       '@airexpay/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@airexpay/validation':
+        specifier: workspace:*
+        version: link:../../packages/validation
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4

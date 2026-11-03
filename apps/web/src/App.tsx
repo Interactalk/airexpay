@@ -9,6 +9,7 @@ import { WebhooksPage } from './pages/dashboard/WebhooksPage.tsx';
 import { CheckoutRoutes } from './pages/CheckoutPage.tsx';
 import { LandingPage } from './pages/LandingPage.tsx';
 import { NotFoundPage } from './pages/NotFoundPage.tsx';
+import { OnboardingPage, PrivacyPage, TermsPage } from './pages/onboarding/OnboardingPage.tsx';
 import { PricingPage } from './pages/PricingPage.tsx';
 
 export function App() {
@@ -16,6 +17,11 @@ export function App() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/pricing" element={<PricingPage />} />
+      <Route path="/terms" element={<TermsPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/onboarding" element={<OnboardingPage />} />
+      <Route path="/onboarding/preview/:step" element={<OnboardingPage preview />} />
+      <Route path="/onboarding/:step" element={<OnboardingPage />} />
       <Route path="/pay" element={<CheckoutRoutes />} />
       <Route path="/pay/demo/:state" element={<CheckoutRoutes />} />
       <Route path="/pay/:publicId" element={<CheckoutRoutes />} />

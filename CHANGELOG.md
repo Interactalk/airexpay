@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.4 — 2026-11-03 (Asia/Dhaka, UTC+6)
+
+- Merchant onboarding with a resumable stepper: account and email verification (Supabase-shaped, mocked locally), business profile, representatives and UBOs, camera or file identity documents, proof of address, review, and a status screen.
+- Mock KYC adapter only. Document bytes are AES-GCM ciphertext, private to the organization and admins, and snapshotted into the Durable Object. A hosted Supabase migration file was added and not applied. Data retention and the KYC provider are TODO for legal review.
+- Live API keys and go-live review stay locked until onboarding is approved. No deploy, no hosted Supabase changes, and no NOWPayments calls.
+- This branch is based on the open frontend pull request because that pull request is not merged.
+
 ## 0.1.3 — 2026-11-03 (Asia/Dhaka, UTC+6)
 
 - Frontend follows design system v0.5 (`design/`): Inter for the interface, Newsreader for marketing headlines, ink-blue `#1e3a5f`. Outfit and the previous green accent are gone.

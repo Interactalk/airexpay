@@ -11,17 +11,24 @@ export function readEnvironment(value: string | null): AppEnvironment {
 
 /**
  * Staging always shows the simulation banner.
- * Production exists only with an approved review, and then the Live mode pill
- * replaces the banner. The thin strip is never used for the live pill.
+ * The Live mode pill replaces the banner only after onboarding is approved
+ * and the environment is production. The thin strip is never used for the pill.
+ * Live keys stay locked until that approval.
  */
 export function resolveChrome(
   environment: AppEnvironment,
   routeReview: ReviewState | null,
-): { live: boolean; banner: boolean; review: ReviewState } {
-  if (environment === 'production') {
-    return { live: true, banner: false, review: 'approved' };
+  onboardingApproved = false,
+): { live: boolean; banner: boolean; review: ReviewState; onboardingApproved: boolean } {
+  if (environment === 'production' && onboardingApproved) {
+    return { live: true, banner: false, review: 'approved', onboardingApproved: true };
   }
-  return { live: false, banner: true, review: routeReview ?? 'pending' };
+  return {
+    live: false,
+    banner: true,
+    review: routeReview ?? 'pending',
+    onboardingApproved,
+  };
 }
 
 export function preservedQuery(search: string): string {

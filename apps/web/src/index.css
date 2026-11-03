@@ -676,3 +676,37 @@ body {
 .break-anywhere {
   word-break: break-all;
 }
+
+.camera-stage {
+  position: relative;
+  width: min(100%, 420px);
+  background: #111;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.camera-stage video,
+.camera-stage img {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+  object-fit: cover;
+}
+
+.guide-frame {
+  position: absolute;
+  inset: 12% 10%;
+  border: 2px solid #fff;
+  border-radius: 8px;
+  box-shadow: 0 0 0 999px rgb(0 0 0 / 45%);
+  pointer-events: none;
+}
+
+.onboarding {
+  max-width: 760px;
+  margin: 0 auto;
+  padding-top: max(24px, env(safe-area-inset-top));
+  padding-right: max(16px, env(safe-area-inset-right));
+  padding-bottom: calc(32px + env(safe-area-inset-bottom));
+  padding-left: max(16px, env(safe-area-inset-left));
+}

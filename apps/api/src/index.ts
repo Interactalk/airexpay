@@ -7,8 +7,8 @@ import {
 import { webhookKeyring } from '@airexpay/payment-core';
 import { createApp } from './app.ts';
 import { DurableObjectRateLimit, DurableObjectRepository } from './db/durable-object-repository.ts';
-import { InvoiceStore } from './db/invoice-store.ts';
 import { MemoryDatabase } from './db/memory.ts';
+import { InvoiceStore } from './db/invoice-store.ts';
 import { selectRepository } from './db/select.ts';
 import type { InvoiceRepository } from './db/repository.ts';
 import { errorBody } from './http.ts';
@@ -64,8 +64,10 @@ export default {
         { status: 403 },
       );
     }
+    const db = database(env);
+    const durable = db instanceof DurableObjectRepository ? db : null;
     const app = createApp({
-      db: database(env),
+      db,
       environment: env.ENVIRONMENT,
       allowedModesRaw: env.ALLOWED_MODES,
       modeAEnv: env.NOWPAYMENTS_MODE_A_ENABLED,
@@ -73,6 +75,13 @@ export default {
       checkoutBaseUrl: resolveCheckoutBaseUrl(env.ENVIRONMENT, env.PUBLIC_CHECKOUT_BASE_URL),
       livemode: parseLivemode(env.LIVEMODE),
       rateLimit: rateLimit(env),
+      ...(db instanceof MemoryDatabase ? { onboardingStore: db } : {}),
+      ...(durable
+        ? {
+            loadOnboarding: () => durable.loadOnboarding(),
+            saveOnboarding: (snapshot) => durable.saveOnboarding(snapshot),
+          }
+        : {}),
     });
     return app.fetch(request);
   },

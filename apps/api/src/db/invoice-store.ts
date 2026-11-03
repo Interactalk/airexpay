@@ -13,6 +13,7 @@ import type {
 } from './repository.ts';
 import { webhookKeyring, type WebhookSecretKeyring } from '@airexpay/payment-core';
 import type { AuditRecord, PaymentSnapshot } from '@airexpay/payment-core';
+import { emptyOnboardingSnapshot, type OnboardingSnapshot } from './onboarding-store.ts';
 
 export interface DirectoryRegistration {
   publicId: string;
@@ -26,6 +27,8 @@ interface DirectoryState {
   providerPayments: Record<string, string>;
   organizations: string[];
   webhooks: WebhookRecord[];
+  /** Ciphertext document records. Not a public bucket. An R2 object key can replace the ciphertext later. */
+  onboarding?: OnboardingSnapshot;
 }
 
 type StoreEnv = Env & {
@@ -201,6 +204,16 @@ export class InvoiceStore extends DurableObject<StoreEnv> {
     return this.readDirectory((state) => [...state.webhooks]);
   }
 
+  async loadDirectoryOnboarding(): Promise<OnboardingSnapshot> {
+    return this.readDirectory((state) => state.onboarding ?? emptyOnboardingSnapshot());
+  }
+
+  async saveDirectoryOnboarding(snapshot: OnboardingSnapshot): Promise<void> {
+    await this.mutateDirectory((state) => {
+      state.onboarding = snapshot;
+    });
+  }
+
   async take(
     nowMs: number,
     limit: number,
@@ -332,5 +345,11 @@ export class InvoiceStore extends DurableObject<StoreEnv> {
 }
 
 function emptyDirectory(): DirectoryState {
-  return { publicIds: {}, providerPayments: {}, organizations: [], webhooks: [] };
+  return {
+    publicIds: {},
+    providerPayments: {},
+    organizations: [],
+    webhooks: [],
+    onboarding: emptyOnboardingSnapshot(),
+  };
 }
