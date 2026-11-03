@@ -1,15 +1,20 @@
 import type {
   AuditRecord,
+  FeeSnapshot,
   PaymentEvent,
   PaymentSnapshot,
   TransitionResult,
+  UsageAccrual,
+  UsageStatement,
   WebhookSecretKeyring,
 } from '@airexpay/payment-core';
 import {
   decryptWebhookSecret,
   emptyPaymentSnapshot,
   encryptWebhookSecret,
+  ModeBUsageLedger,
   requireWebhookKey,
+  selectFeeCollection,
 } from '@airexpay/payment-core';
 import type { InvoiceStatus, PaymentStatus } from '@airexpay/shared';
 import { isDecimalString } from '@airexpay/shared';
@@ -66,10 +71,25 @@ const INVOICE_SQL = `
  * (embedded Postgres in tests). This class does not open a network connection.
  */
 export class PostgresRepository implements InvoiceRepository {
+  /**
+   * Fee snapshots and the usage ledger are process memory.
+   * They are not SQL columns, so this change does not add a migration.
+   */
+  private readonly feeSnapshots = new Map<string, FeeSnapshot>();
+  private readonly usage = selectFeeCollection(new ModeBUsageLedger());
+
   constructor(
     private readonly sql: SqlPool,
     private readonly webhookKeys: WebhookSecretKeyring = {},
   ) {}
+
+  usageEntries(organizationId: string): readonly UsageAccrual[] {
+    return this.usage.entriesFor(organizationId);
+  }
+
+  usageStatement(organizationId: string, month: string): UsageStatement {
+    return this.usage.statement(organizationId, month);
+  }
 
   async listWebhooks(): Promise<readonly WebhookRecord[]> {
     const result = await this.sql.query(
@@ -152,7 +172,7 @@ export class PostgresRepository implements InvoiceRepository {
       publicId,
     ]);
     const row = result.rows[0];
-    return row ? mapInvoice(row) : null;
+    return row ? this.withFee(mapInvoice(row)) : null;
   }
 
   async createInvoice(input: CreateInvoiceInput): Promise<InvoiceRecord> {
@@ -241,6 +261,11 @@ export class PostgresRepository implements InvoiceRepository {
       );
       const record = await this.fetchInvoice(tx, input.organizationId, invoiceId);
       if (!record) throw new Error('invoice insert failed');
+      if (input.feeSnapshot) {
+        const fee = structuredClone(input.feeSnapshot);
+        this.feeSnapshots.set(record.id, fee);
+        record.feeSnapshot = fee;
+      }
       return record;
     });
   }
@@ -386,6 +411,16 @@ export class PostgresRepository implements InvoiceRepository {
             outboxEvents: [],
           } satisfies TransitionResult)
         : null;
+      if (applied && input.toStatus === 'finished' && payment) {
+        const invoiceId = text(payment.invoice_id);
+        this.usage.accrue({
+          invoiceId,
+          organizationId: text(payment.organization_id),
+          status: 'paid',
+          paidAt: input.receivedAt,
+          snapshot: this.feeSnapshots.get(invoiceId) ?? null,
+        });
+      }
       return {
         duplicate: false,
         webhook: this.mapWebhook(webhookRow, reason),
@@ -552,7 +587,13 @@ export class PostgresRepository implements InvoiceRepository {
       [organizationId, idOrPublicId],
     );
     const row = result.rows[0];
-    return row ? mapInvoice(row) : null;
+    return row ? this.withFee(mapInvoice(row)) : null;
+  }
+
+  private withFee(record: InvoiceRecord): InvoiceRecord {
+    const fee = this.feeSnapshots.get(record.id);
+    if (fee) record.feeSnapshot = fee;
+    return record;
   }
 
   private mapWebhook(row: Record<string, unknown>, reason: string | null): WebhookRecord {

@@ -2,7 +2,7 @@
 
 Simple crypto payments. Global business. — a product of AirexPay LLC.
 
-**Status:** Phase 1.2, simulation only. Live payments are not authorized. See `docs/PROJECT_STATUS.md`.
+**Status:** Phase 1.6 simulation. Surfaces are split across subdomains. Live payments are not authorized. See `docs/PROJECT_STATUS.md`, `docs/PRICING.md`, and `docs/SUBDOMAINS.md`.
 
 ## Key finding
 
@@ -34,5 +34,7 @@ Requires Node.js 22 or newer. Copy `.env.example` if you want local placeholders
 | docs/LEGAL_AND_COMPLIANCE_DEPENDENCIES.md                                                                                                     | FinCEN, OFAC, state MTL, privacy, tax (not legal advice) |
 | docs/PRODUCT_REQUIREMENTS.md, USER_PERSONAS.md, USER_JOURNEYS.md, MVP_SCOPE.md, PRODUCT_ROADMAP.md                                            | Product                                                  |
 | docs/SYSTEM_ARCHITECTURE.md, INFRASTRUCTURE.md, DATABASE_ARCHITECTURE.md, API_ARCHITECTURE.md, SECURITY_ARCHITECTURE.md, PAYMENT_LIFECYCLE.md | Architecture                                             |
+| docs/PRICING.md                                                                                                                               | Fee rule, rounding, collection mode                      |
+| docs/SUBDOMAINS.md                                                                                                                            | Workers, cookies, DNS records not yet created            |
 | docs/DECISIONS.md, PROJECT_STATUS.md, CHANGELOG.md, docs/KNOWN_LIMITATIONS.md                                                                 | Governance                                               |
 | SECURITY.md                                                                                                                                   | How to report a security issue                           |

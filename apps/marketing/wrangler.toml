@@ -1,0 +1,38 @@
+# Marketing Worker. Apex site only. Do not deploy.
+name = "airexpay-marketing"
+main = "src/index.ts"
+compatibility_date = "2026-11-03"
+workers_dev = false
+
+# route: airexpay.com/*
+# route: www.airexpay.com/*
+# [[routes]]
+# pattern = "airexpay.com/*"
+# zone_name = "airexpay.com"
+
+[vars]
+ENVIRONMENT = "dev"
+
+[env.staging]
+name = "airexpay-marketing-staging"
+workers_dev = false
+
+# route: staging.airexpay.com/*
+# [[env.staging.routes]]
+# pattern = "staging.airexpay.com/*"
+# zone_name = "airexpay.com"
+
+[env.staging.vars]
+ENVIRONMENT = "staging"
+
+[env.production]
+name = "airexpay-marketing"
+workers_dev = false
+
+# route: airexpay.com/*
+# [[env.production.routes]]
+# pattern = "airexpay.com/*"
+# zone_name = "airexpay.com"
+
+[env.production.vars]
+ENVIRONMENT = "production"

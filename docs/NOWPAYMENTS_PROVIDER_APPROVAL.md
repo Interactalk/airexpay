@@ -55,6 +55,10 @@ Subject: AirexPay LLC: eligibility and platform-model approval request
 > We will use only your sandbox until we receive written confirmation.
 > Regards, [NAME], [TITLE], AirexPay LLC, [EMAIL]
 
+## Fee schedule TODO
+
+TODO: recheck the configured NOWPayments cost of 1.5% (`providerFeeRate` `0.015`), including any conversion fee, against their official pricing page before go-live. Question 9 in the draft above asks them for the fee schedule. The number in `packages/configuration/src/pricing.ts` is simulation config only. AirExpay multiplies that cost by 1.5, which is a 0.75% margin and a 2.25% total on the invoice (1.50, 0.75, and 2.25 on 100.00 USD). That total is not a public price until the owner approves one. Mode A platform-fee collection is unimplemented. See `docs/PRICING.md`.
+
 ## Alternatives to evaluate (US-eligible per public terms)
 
 | Provider                                                     | US eligibility (public)                                                                                                                                          | Platform / multi-merchant                                                                                                                                                    | Notes                                                                                                                                                          | Source                                                                                                                                                                 |

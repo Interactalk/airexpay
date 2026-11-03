@@ -5,6 +5,7 @@ import { InvoicesPage } from './pages/dashboard/InvoicesPage.tsx';
 import { OverviewPage } from './pages/dashboard/OverviewPage.tsx';
 import { PaymentLinksPage } from './pages/dashboard/PaymentLinksPage.tsx';
 import { SettingsPage } from './pages/dashboard/SettingsPage.tsx';
+import { UsagePage } from './pages/dashboard/UsagePage.tsx';
 import { WebhooksPage } from './pages/dashboard/WebhooksPage.tsx';
 import { CheckoutRoutes } from './pages/CheckoutPage.tsx';
 import { LandingPage } from './pages/LandingPage.tsx';
@@ -29,6 +30,7 @@ export function App() {
         <Route index element={<OverviewPage />} />
         <Route path="invoices" element={<InvoicesPage />} />
         <Route path="invoices/:invoiceId" element={<InvoicesPage />} />
+        <Route path="usage" element={<UsagePage />} />
         <Route path="payment-links" element={<PaymentLinksPage />} />
         <Route path="payment-links/new" element={<PaymentLinksPage creating />} />
         <Route path="api-keys" element={<ApiKeysPage />} />

@@ -1,11 +1,19 @@
 import { SIMULATION_ORG_IDS } from '@airexpay/configuration';
-import type { AuditRecord, PaymentSnapshot, TransitionResult } from '@airexpay/payment-core';
+import type {
+  AuditRecord,
+  PaymentSnapshot,
+  TransitionResult,
+  UsageAccrual,
+  UsageStatement,
+} from '@airexpay/payment-core';
 import {
   applyPaymentTransition,
   decryptWebhookSecret,
   emptyPaymentSnapshot,
   encryptWebhookSecret,
+  ModeBUsageLedger,
   requireWebhookKey,
+  selectFeeCollection,
   type WebhookSecretKeyring,
 } from '@airexpay/payment-core';
 import type {
@@ -42,6 +50,8 @@ export interface MemorySnapshot {
   deliveries: DeliveryInput[];
   audits: AuditRecord[];
   onboarding?: OnboardingSnapshot;
+  /** Mode B merchant usage lines. Absent on snapshots written before pricing. */
+  usageLedger?: UsageAccrual[];
 }
 
 export type {
@@ -82,6 +92,7 @@ export class MemoryDatabase implements InvoiceRepository {
   private readonly outbox = new Map<string, OutboxRecord>();
   private readonly deliveries: DeliveryInput[] = [];
   private invoiceSequence = 1000;
+  private readonly usage = selectFeeCollection(new ModeBUsageLedger());
   readonly onboarding = new OnboardingRecords();
 
   constructor(private readonly webhookKeys: WebhookSecretKeyring = {}) {}
@@ -101,6 +112,7 @@ export class MemoryDatabase implements InvoiceRepository {
       deliveries: this.deliveries.map((row) => structuredClone(row)),
       audits: this.audits.map((row) => structuredClone(row)),
       onboarding: this.onboarding.snapshot(),
+      usageLedger: this.usage.list(),
     };
   }
 
@@ -127,6 +139,7 @@ export class MemoryDatabase implements InvoiceRepository {
     db.deliveries.push(...copy.deliveries);
     db.audits.push(...copy.audits);
     db.onboarding.restore(copy.onboarding);
+    db.usage.restore(copy.usageLedger ?? []);
     return db;
   }
 
@@ -207,6 +220,7 @@ export class MemoryDatabase implements InvoiceRepository {
       rawStatus: 'waiting',
       network: input.network,
       merchantName: merchantNameFor(input.organizationId),
+      ...(input.feeSnapshot ? { feeSnapshot: structuredClone(input.feeSnapshot) } : {}),
     };
     this.invoices.set(record.id, record);
     this.byPublicId.set(record.publicId, record.id);
@@ -282,6 +296,15 @@ export class MemoryDatabase implements InvoiceRepository {
           invoice.latePaymentReview = transition.snapshot.latePaymentReview;
           invoice.actuallyPaid = transition.snapshot.actuallyPaid;
           if (transition.snapshot.payAmount) invoice.payAmount = transition.snapshot.payAmount;
+          if (transition.invoiceStatus === 'paid') {
+            this.usage.accrue({
+              invoiceId: invoice.id,
+              organizationId: invoice.organizationId,
+              status: 'paid',
+              paidAt: input.receivedAt,
+              snapshot: invoice.feeSnapshot ?? null,
+            });
+          }
         }
         webhook.processedAt = input.receivedAt;
         webhook.reason = transition.reason;
@@ -375,6 +398,14 @@ export class MemoryDatabase implements InvoiceRepository {
 
   getOutbox(id: string): OutboxRecord | null {
     return this.outbox.get(id) ?? null;
+  }
+
+  usageEntries(organizationId: string): readonly UsageAccrual[] {
+    return this.usage.entriesFor(organizationId);
+  }
+
+  usageStatement(organizationId: string, month: string): UsageStatement {
+    return this.usage.statement(organizationId, month);
   }
 
   private requireOutbox(id: string): OutboxRecord {

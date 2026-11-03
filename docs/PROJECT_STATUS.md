@@ -12,20 +12,21 @@ Updated: 2026-11-03 (Asia/Dhaka, UTC+6)
 | Database                | Phase 1 migration is already on the dev project and was not edited. Later migrations were applied only to embedded Postgres in tests. Unit tests still default to the in-memory repository. Dev and staging Wrangler configs select `STORAGE_BACKEND=durable_object` with the `INVOICE_STORE` binding. Nothing was deployed and no hosted database was changed. |
 | Payment integration     | Simulation mode. Mock provider, number-preserving IPN verifier, local outbox worker. Live calls disabled.                                                                                                                                                                                                                                                       |
 | Security audit          | Pending                                                                                                                                                                                                                                                                                                                                                         |
-| Staging deployment      | Not done. Not authorized by this change. Staging URLs are configured only: `https://staging.airexpay.com` and `https://api-staging.airexpay.com`.                                                                                                                                                                                                               |
+| Staging deployment      | Not done. Not authorized by this change. Staging hosts are listed in `docs/SUBDOMAINS.md`. Checkout is `https://pay-staging.airexpay.com`. Marketing is `https://staging.airexpay.com`. API is `https://api-staging.airexpay.com`.                                                                                                                              |
 | Production deployment   | Not authorized                                                                                                                                                                                                                                                                                                                                                  |
 | Live transactions       | Not authorized                                                                                                                                                                                                                                                                                                                                                  |
-| Current milestone       | Phase 1.4 merchant onboarding on the unmerged design v0.5 frontend                                                                                                                                                                                                                                                                                              |
+| Current milestone       | Phase 1.6 multi-subdomain Workers, branched from the open pricing pull request                                                                                                                                                                                                                                                                                  |
 
 ## Evidence for this milestone
 
-Commands run locally on 2026-11-03:
+Commands run locally on 2026-11-03 for the subdomain Workers:
 
 - `pnpm lint` — passed (one react-refresh warning in `theme.tsx`; Prettier check passed)
 - `pnpm typecheck` — passed
-- `pnpm test` — 17 files, 82 tests passed, 0 failed
-- `pnpm build` — API bundle and web production build passed
-- `pnpm test:e2e` — 40 passed, 24 skipped. Skipped rows are the 390px checks on the desktop project. Mobile passed checkout states, server-polled status, `scrollWidth` equals 390, and 44px tap targets. Camera allow and deny passed with Chromium `--use-fake-device-for-media-stream`.
+- `pnpm test` — 19 files, 103 tests passed, 0 failed
+- `pnpm build` — API, web, auth, pay, app, marketing, docs, and admin bundles passed
+
+Cookie, CSRF, redirect, and CORS tests passed. Staging rejects the production cookie name. Pay strips auth cookies. No DNS record was created and nothing was deployed.
 
 Phase 1.2 Durable Object evidence still applies: Miniflare creates an invoice, evicts the organization and directory objects, simulates a signed IPN, and reads `paid` back from SQLite. This change does not redeploy staging and does not apply migrations.
 
@@ -44,7 +45,7 @@ Vars already in `wrangler.toml`:
 | `SIMULATION_IPN_SECRET`      | `simulation-ipn-secret` (public placeholder)    |
 | `SIMULATION_API_KEY`         | `ak_test_simulation_alpha` (public placeholder) |
 | `STORAGE_BACKEND`            | `durable_object`                                |
-| `PUBLIC_CHECKOUT_BASE_URL`   | `https://staging.airexpay.com`                  |
+| `PUBLIC_CHECKOUT_BASE_URL`   | `https://pay-staging.airexpay.com`              |
 | `DATABASE_URL`               | empty                                           |
 
 Binding:
@@ -64,27 +65,29 @@ No `NOWPAYMENTS_API_KEY`, no hosted `DATABASE_URL`, and no production environmen
 
 ## Tasks
 
-| Task                                                               | Status                                                                                           |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
-| 1.1 Environment inspection                                         | COMPLETE (docs)                                                                                  |
-| 1.2 Environment audit doc                                          | COMPLETE                                                                                         |
-| 2.1 Company identity                                               | BLOCKED (details not supplied)                                                                   |
-| 2.2 NOWPayments approval                                           | BLOCKED (email drafted, not sent)                                                                |
-| 2.3 Legal research                                                 | IN PROGRESS (FinCEN/OFAC verified; counsel needed)                                               |
-| 2.4 Integration model decision                                     | BLOCKED (provider answer)                                                                        |
-| 3 Product docs                                                     | COMPLETE (draft for owner review)                                                                |
-| 4 Architecture docs                                                | COMPLETE (draft for owner review)                                                                |
-| 5.1 Monorepo, mock provider, state machine, IPN verifier           | TESTED                                                                                           |
-| 5.2 Invoice API and webhook route                                  | TESTED (memory and embedded Postgres)                                                            |
-| 5.3 SQL migrations and embedded Postgres checks                    | TESTED (new migrations included; not applied to the hosted dev project by this change)           |
-| 5.4 Hosted checkout wired to the mock API                          | TESTED (browser flow recorded)                                                                   |
-| 5.5 Hosted Supabase apply of new migrations, deploy, live provider | NOT STARTED (not authorized)                                                                     |
-| 5.6 Merchant webhook outbox worker                                 | TESTED locally only                                                                              |
-| 5.7 Durable Object repository (`InvoiceStore`)                     | TESTED with Miniflare via Wrangler's local test harness. Not deployed.                           |
-| 5.8 Staging simulation checkout gate and rate limit                | TESTED. Production config returns 404. Not deployed.                                             |
-| 5.9 Merchant webhook secret AES-GCM                                | TESTED. `CREDENTIALS_KEK` for provider secrets is still not implemented.                         |
-| 5.10 Design system v0.5 frontend                                   | TESTED locally. Dashboard data is example-only. Checkout polls the simulation API. Not deployed. |
-| 5.11 Merchant onboarding and mock KYC                              | TESTED locally. Migration file added and not applied to a hosted database. Not deployed.         |
+| Task                                                               | Status                                                                                                                               |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| 1.1 Environment inspection                                         | COMPLETE (docs)                                                                                                                      |
+| 1.2 Environment audit doc                                          | COMPLETE                                                                                                                             |
+| 2.1 Company identity                                               | BLOCKED (details not supplied)                                                                                                       |
+| 2.2 NOWPayments approval                                           | BLOCKED (email drafted, not sent)                                                                                                    |
+| 2.3 Legal research                                                 | IN PROGRESS (FinCEN/OFAC verified; counsel needed)                                                                                   |
+| 2.4 Integration model decision                                     | BLOCKED (provider answer)                                                                                                            |
+| 3 Product docs                                                     | COMPLETE (draft for owner review)                                                                                                    |
+| 4 Architecture docs                                                | COMPLETE (draft for owner review)                                                                                                    |
+| 5.1 Monorepo, mock provider, state machine, IPN verifier           | TESTED                                                                                                                               |
+| 5.2 Invoice API and webhook route                                  | TESTED (memory and embedded Postgres)                                                                                                |
+| 5.3 SQL migrations and embedded Postgres checks                    | TESTED (new migrations included; not applied to the hosted dev project by this change)                                               |
+| 5.4 Hosted checkout wired to the mock API                          | TESTED (browser flow recorded)                                                                                                       |
+| 5.5 Hosted Supabase apply of new migrations, deploy, live provider | NOT STARTED (not authorized)                                                                                                         |
+| 5.6 Merchant webhook outbox worker                                 | TESTED locally only                                                                                                                  |
+| 5.7 Durable Object repository (`InvoiceStore`)                     | TESTED with Miniflare via Wrangler's local test harness. Not deployed.                                                               |
+| 5.8 Staging simulation checkout gate and rate limit                | TESTED. Production config returns 404. Not deployed.                                                                                 |
+| 5.9 Merchant webhook secret AES-GCM                                | TESTED. `CREDENTIALS_KEK` for provider secrets is still not implemented.                                                             |
+| 5.10 Design system v0.5 frontend                                   | TESTED locally. Dashboard data is example-only. Checkout polls the simulation API. Not deployed.                                     |
+| 5.11 Merchant onboarding and mock KYC                              | TESTED locally. Migration file added and not applied to a hosted database. Not deployed.                                             |
+| 5.12 Platform fee pricing and monthly usage ledger                 | TESTED locally. Default provider rate is the configured 1.5%. No hosted migration, no deploy, no NOWPayments call. Mode A stays off. |
+| 5.13 Multi-subdomain Workers and shared auth                       | TESTED locally. DNS and deploy are not done. Live Supabase Auth is not called.                                                       |
 
 ## Decision requests for owner
 

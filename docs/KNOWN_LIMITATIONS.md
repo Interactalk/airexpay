@@ -9,7 +9,10 @@ Updated: 2026-11-03 (Asia/Dhaka, UTC+6).
 - `STORAGE_BACKEND=postgres` refuses hosted URLs and does not open a connection from the Worker. Tests inject PGlite.
 - `20261103120000_phase1_foundation.sql` is already applied on the dev project and is not edited here. `20261103140811_phase1_1_transition_rejections.sql` and `20261103140812_phase1_1_supabase_advisors.sql` are local files. This change does not apply them to the hosted project and does not deploy the Worker.
 - `NowPaymentsProvider` has no HTTP client path for create, estimate, or get. Tests assert `fetch` is not called.
-- `MODE_A_FEATURE_FLAG` in `packages/configuration` is `false`. An env value of `true` does not enable platform / sub-partner mode.
+- `MODE_A_FEATURE_FLAG` in `packages/configuration` is `false`. An env value of `true` does not enable platform / sub-partner mode. The platform-fee split is also unimplemented: fees are not taken from customer payments.
+- The provider fee rate is simulation config in `packages/configuration/src/pricing.ts`. The owner set it to 1.5% (`0.015`). TODO: recheck that rate, including any conversion fee, against official NOWPayments pricing before go-live.
+- Subdomain Workers are not deployed and their DNS records are not created. Wrangler routes stay commented. Live Supabase Auth is not called. Staging and production share the parent domain `.airexpay.com` and are separated by cookie name (`ax_sess` vs `ax_sess_stg`); each Worker ignores the other name. `pay.*` strips both.
+- Fee snapshots and the Mode B usage ledger are stored in the memory and Durable Object JSON snapshots. They are not a hosted SQL column. The Postgres repository keeps them in process memory for the life of that object.
 - Checkout addresses are simulated. Do not send cryptocurrency to them.
 - There is no dashboard, Supabase Auth, API-key issuance UI, reconciliation cron, or email.
 - Merchant webhook signing secrets are AES-256-GCM ciphertext (`v1.` + base64url of a 12-byte IV and the tagged ciphertext) under `WEBHOOK_SECRET_ENCRYPTION_KEY`. The memory and Postgres repositories do the same. No HTTP response returns that secret. Provider API keys and IPN secrets are still not encrypted with `CREDENTIALS_KEK`.
@@ -36,4 +39,4 @@ Updated: 2026-11-03 (Asia/Dhaka, UTC+6).
 
 ## Product claims
 
-The website does not state fees, settlement speed, or licensing. Those facts are not established. Company registration details (state, EIN, address) were not supplied and are not invented here.
+The public pricing page does not state fees, settlement speed, or licensing. The dashboard shows a simulation fee snapshot and a monthly usage statement, both labeled example data, using the configured 1.5% provider rate. Recheck that rate against official NOWPayments pricing before go-live. Company registration details (state, EIN, address) were not supplied and are not invented here.

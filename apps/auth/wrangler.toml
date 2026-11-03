@@ -1,0 +1,38 @@
+# Auth Worker. Do not deploy. No account_id. workers_dev off.
+# Routes below are the intended binding after the owner approves DNS. They are comments so this file cannot attach a hostname.
+name = "airexpay-auth"
+main = "src/index.ts"
+compatibility_date = "2026-11-03"
+workers_dev = false
+
+# route: auth.airexpay.com/*
+# [[routes]]
+# pattern = "auth.airexpay.com/*"
+# zone_name = "airexpay.com"
+
+[vars]
+ENVIRONMENT = "dev"
+
+[env.staging]
+name = "airexpay-auth-staging"
+workers_dev = false
+
+# route: auth-staging.airexpay.com/*
+# [[env.staging.routes]]
+# pattern = "auth-staging.airexpay.com/*"
+# zone_name = "airexpay.com"
+
+[env.staging.vars]
+ENVIRONMENT = "staging"
+
+[env.production]
+name = "airexpay-auth"
+workers_dev = false
+
+# route: auth.airexpay.com/*
+# [[env.production.routes]]
+# pattern = "auth.airexpay.com/*"
+# zone_name = "airexpay.com"
+
+[env.production.vars]
+ENVIRONMENT = "production"

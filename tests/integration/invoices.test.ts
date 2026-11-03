@@ -1,5 +1,5 @@
 import { SIMULATION_API_KEYS, SIMULATION_ORG_IDS } from '@airexpay/configuration';
-import { signNowPaymentsBody } from '@airexpay/payment-core';
+import { quoteConfiguredFee, signNowPaymentsBody } from '@airexpay/payment-core';
 import { describe, expect, it } from 'vitest';
 import { createApp } from '../../apps/api/src/app.ts';
 import { MemoryDatabase } from '../../apps/api/src/db/memory.ts';
@@ -81,8 +81,37 @@ describe('POST/GET /v1/invoices', () => {
       pay_amount: string;
       provider: string;
       payment: { provider_payment_id: string; status: string };
+      fee: {
+        quoted_at: string;
+        provider_fee: string;
+        margin: string;
+        total_fee: string;
+        margin_multiplier: string;
+        provider_fee_rate: string;
+        network_fee: string;
+        network_fee_charged: string;
+        network_fee_marked_up: boolean;
+        rounding: string;
+        plan_version: number;
+      };
     };
     expect(body.livemode).toBe(false);
+    expect(body.fee.margin_multiplier).toBe('1.5');
+    expect(body.fee.rounding).toBe('half_away_from_zero');
+    expect(body.fee.network_fee_marked_up).toBe(false);
+    const quoted = quoteConfiguredFee({
+      at: body.fee.quoted_at,
+      priceAmount: '49.00',
+      currency: 'USD',
+      networkFee: '0',
+    });
+    expect(body.fee.provider_fee_rate).toBe(quoted.providerFeeRate);
+    expect(body.fee.plan_version).toBe(quoted.planVersion);
+    expect(body.fee.provider_fee).toBe(quoted.providerFee);
+    expect(body.fee.margin).toBe(quoted.margin);
+    expect(body.fee.total_fee).toBe(quoted.totalFee);
+    expect(body.fee.network_fee).toBe('0.00');
+    expect(body.fee.network_fee_charged).toBe('0.00');
     expect(body.status).toBe('waiting');
     expect(body.provider).toBe('mock');
     expect(body.pay_address.startsWith('tb1qsim')).toBe(true);
@@ -128,6 +157,32 @@ describe('POST/GET /v1/invoices', () => {
     expect(SIMULATION_ORG_IDS.alpha).not.toBe(SIMULATION_ORG_IDS.beta);
   });
 
+  it('snapshots a 100.00 USD invoice as provider fee 1.50, margin 0.75, and total 2.25', async () => {
+    const { api } = app();
+    const created = await postInvoice(api, SIMULATION_API_KEYS.alpha, 'idem_fee_100', {
+      ...invoiceBody,
+      price_amount: '100.00',
+      order_id: 'order_100',
+    });
+    expect(created.status).toBe(201);
+    const body = (await created.json()) as {
+      fee: {
+        provider_fee_rate: string;
+        margin_multiplier: string;
+        provider_fee: string;
+        margin: string;
+        total_fee: string;
+        network_fee_marked_up: boolean;
+      };
+    };
+    expect(body.fee.provider_fee_rate).toBe('0.015');
+    expect(body.fee.margin_multiplier).toBe('1.5');
+    expect(body.fee.provider_fee).toBe('1.50');
+    expect(body.fee.margin).toBe('0.75');
+    expect(body.fee.total_fee).toBe('2.25');
+    expect(body.fee.network_fee_marked_up).toBe(false);
+  });
+
   it('applies a finished IPN once and ignores the duplicate', async () => {
     const { api, db } = app();
     const created = await postInvoice(api, SIMULATION_API_KEYS.alpha, 'idem_ipn_once', invoiceBody);
@@ -136,6 +191,7 @@ describe('POST/GET /v1/invoices', () => {
       pay_amount: string;
       pay_address: string;
       payment: { id: string; provider_payment_id: string };
+      fee: { provider_fee: string; margin: string; total_fee: string };
     };
     const signed = await signNowPaymentsBody(
       {
@@ -180,6 +236,11 @@ describe('POST/GET /v1/invoices', () => {
       .outboxFor(invoice.payment.id)
       .filter((event) => event.eventType === 'payment.finished');
     expect(fulfillment).toHaveLength(1);
+    const usage = db.usageEntries(SIMULATION_ORG_IDS.alpha);
+    expect(usage).toHaveLength(1);
+    expect(usage[0]?.providerFee).toBe(invoice.fee.provider_fee);
+    expect(usage[0]?.margin).toBe(invoice.fee.margin);
+    expect(usage[0]?.totalFee).toBe(invoice.fee.total_fee);
   });
 
   it('stores an underpaid invoice and does not fulfill it', async () => {
@@ -214,6 +275,7 @@ describe('POST/GET /v1/invoices', () => {
     expect(
       db.outboxFor(invoice.payment.id).some((event) => event.eventType === 'payment.finished'),
     ).toBe(false);
+    expect(db.usageEntries(SIMULATION_ORG_IDS.alpha)).toHaveLength(0);
   });
 
   it('rejects a tampered IPN and leaves the invoice waiting', async () => {

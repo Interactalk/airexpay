@@ -1,6 +1,6 @@
 # Infrastructure
 
-Environments: `dev` (local + mock), `staging` (not deployed; checkout `https://staging.airexpay.com`, API `https://api-staging.airexpay.com`, mock/sandbox), `production` (not authorized).
+Environments: `dev` (local + mock), `staging` (not deployed; marketing `https://staging.airexpay.com`, checkout `https://pay-staging.airexpay.com`, API `https://api-staging.airexpay.com`, mock/sandbox), `production` (not authorized). Host layout is in `docs/SUBDOMAINS.md`. DNS is not created.
 Cloudflare: Workers (web static assets + api), Queues (outbox), Cron Triggers (reconciliation every 5 min), WAF skip rule for webhook path. Secrets via `wrangler secret`. Supabase: one project per environment; migrations in `supabase/migrations`.
 
 ## Monthly cost estimate (public pricing read 2026-11-03 (Asia/Dhaka, UTC+6))

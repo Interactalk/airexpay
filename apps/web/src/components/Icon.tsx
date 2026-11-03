@@ -19,7 +19,8 @@ export type IconName =
   | 'lock'
   | 'ext'
   | 'dots'
-  | 'menu';
+  | 'menu'
+  | 'usage';
 
 const PATHS: Record<IconName, ReactNode> = {
   home: (
@@ -103,6 +104,7 @@ const PATHS: Record<IconName, ReactNode> = {
     </>
   ),
   menu: <path d="M4 7h16M4 12h16M4 17h16" />,
+  usage: <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />,
 };
 
 export function Icon({ name, size = 16 }: { name: IconName; size?: number }) {

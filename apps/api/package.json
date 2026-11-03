@@ -11,6 +11,7 @@
     "deploy": "echo 'Deploy is not authorized in Phase 1' && exit 1"
   },
   "dependencies": {
+    "@airexpay/config": "workspace:*",
     "@airexpay/configuration": "workspace:*",
     "@airexpay/payment-core": "workspace:*",
     "@airexpay/shared": "workspace:*",

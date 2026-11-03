@@ -10,3 +10,5 @@ export * from './registry.ts';
 export * from './onboarding-state.ts';
 export * from './kyc-provider.ts';
 export * from './document-cipher.ts';
+export * from './pricing.ts';
+export * from './fee-collection.ts';
