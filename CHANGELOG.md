@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.5 — 2026-11-03 (Asia/Dhaka, UTC+6)
+
+- Config-driven pricing. The default provider cost is 1.5% (`0.015`), and `marginMultiplier` stays 1.5. On a 100.00 USD invoice the provider fee is 1.50, the AirExpay margin is 0.75, and the total merchant fee is 2.25. Fees are rounded half away from zero in integer minor units. Plans are versioned with effective dates. Each invoice stores a snapshot of the provider fee, margin, and total fee.
+- The 1.5% rate is config. Recheck it against NOWPayments' official pricing before go-live. Network fees are passed through unless the plan says otherwise. Mode B records the fee on a monthly usage ledger when an invoice becomes paid. Mode A platform split stays unimplemented and flag-off. No custody and no withdrawals.
+- The dashboard shows the fee snapshot on each invoice and a monthly usage statement. The public pricing page still has no amounts.
+- No deploy, no hosted Supabase change, and no NOWPayments call. This branch is based on the open onboarding pull request. The frontend pull request is already merged.
+
 ## 0.1.4 — 2026-11-03 (Asia/Dhaka, UTC+6)
 
 - Merchant onboarding with a resumable stepper: account and email verification (Supabase-shaped, mocked locally), business profile, representatives and UBOs, camera or file identity documents, proof of address, review, and a status screen.

@@ -93,6 +93,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@airexpay/payment-core':
+        specifier: workspace:*
+        version: link:../../packages/payment-core
       '@airexpay/shared':
         specifier: workspace:*
         version: link:../../packages/shared

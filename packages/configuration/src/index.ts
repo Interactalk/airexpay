@@ -1,3 +1,5 @@
+export * from './pricing.ts';
+
 export const PROVIDER_MODES = ['mock', 'nowpayments_direct', 'nowpayments_platform'] as const;
 
 export type ProviderMode = (typeof PROVIDER_MODES)[number];

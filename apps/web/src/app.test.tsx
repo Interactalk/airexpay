@@ -46,6 +46,31 @@ describe('dashboard and marketing pages', () => {
     );
     expect(drawer.textContent?.toLowerCase().includes('accept as paid')).toBe(false);
     expect(screen.queryByRole('button', { name: /accept/i })).toBeNull();
+    const fees = screen.getByTestId('fee-breakdown');
+    expect(fees.textContent).toContain('Provider fee');
+    expect(fees.textContent).toContain('passed through');
+    expect(fees.textContent).toContain('not taken from the customer payment');
+  });
+
+  it('lists paid invoices on the usage statement and leaves public pricing without amounts', () => {
+    renderAt('/dashboard/usage');
+    const statement = screen.getByTestId('usage-statement');
+    expect(statement.textContent).toContain('INV-1048');
+    expect(statement.textContent).toContain('INV-1040');
+    expect(statement.textContent).not.toContain('INV-1045');
+    expect(statement.textContent).toContain('1.50');
+    expect(statement.textContent).toContain('0.75');
+    expect(statement.textContent).toContain('2.25');
+    expect(statement.textContent).toContain('not deducted from the customer payment');
+    expect(screen.queryByRole('button', { name: /withdraw|payout|cash out/i })).toBeNull();
+    cleanup();
+
+    renderAt('/dashboard/invoices/INV-1048');
+    const breakdown = screen.getByTestId('fee-breakdown');
+    expect(breakdown.textContent).toContain('1.5');
+    expect(breakdown.textContent).toContain('28.13');
+    expect(breakdown.textContent).toContain('2.50');
+    expect(breakdown.textContent).toContain('passed through');
   });
 
   it('labels the overview volume and leaves pricing without amounts', () => {

@@ -1,5 +1,17 @@
+import { quoteConfiguredFee, type FeeSnapshot } from '@airexpay/payment-core';
 import type { InvoiceStatus } from '@airexpay/shared';
 import { UNDERPAID_GUIDANCE } from '../lib/status.ts';
+
+const EXAMPLE_QUOTED_AT = '2026-11-03T08:00:00.000Z';
+
+export function exampleFee(amount: string, asset: string, networkFee = '0'): FeeSnapshot {
+  return quoteConfiguredFee({
+    at: EXAMPLE_QUOTED_AT,
+    priceAmount: amount.replace(/,/g, ''),
+    currency: asset,
+    networkFee,
+  });
+}
 
 export const EXAMPLE_ADDRESS = 'TExampLeAddr3ssNotReaL000000';
 export const TX_1045 = '9f2c4e1a7b3d5f6081c2e4a6b8d0f1327a5c9e0b4d6f8a1c3e5b7d9f0a2c4e6b';
@@ -27,6 +39,7 @@ export interface ExampleInvoice {
   txHash: string | null;
   timeline: TimelineEntry[];
   guidance: string | null;
+  fee: FeeSnapshot;
 }
 
 const created = (
@@ -38,6 +51,7 @@ const created = (
   network: string,
   status: InvoiceStatus,
   createdAt: string,
+  networkFee = '0',
 ): ExampleInvoice => ({
   id,
   customer,
@@ -55,6 +69,7 @@ const created = (
   txHash: null,
   timeline: [{ tone: 'ok', label: 'Invoice created', at: createdAt }],
   guidance: null,
+  fee: exampleFee(amount, asset, networkFee),
 });
 
 export const EXAMPLE_INVOICES: ExampleInvoice[] = [
@@ -67,6 +82,7 @@ export const EXAMPLE_INVOICES: ExampleInvoice[] = [
     'Ethereum',
     'paid',
     'Nov 3, 14:02',
+    '2.50',
   ),
   created(
     'INV-1047',
@@ -104,6 +120,7 @@ export const EXAMPLE_INVOICES: ExampleInvoice[] = [
     outstanding: '50.00 USDT',
     txHash: TX_1045,
     guidance: UNDERPAID_GUIDANCE,
+    fee: exampleFee('300.00', 'USDT'),
     timeline: [
       { tone: 'ok', label: 'Invoice created', at: 'Nov 3, 11:40:02' },
       { tone: 'info', label: 'Payment detected · 250.00 USDT', at: 'Nov 3, 11:52:17' },

@@ -9,6 +9,7 @@ import { LiveModePill } from './StatusBadge.tsx';
 const SECTIONS: { label: string; short: string; to: string; icon: IconName; end?: boolean }[] = [
   { label: 'Overview', short: 'Overview', to: '/dashboard', icon: 'home', end: true },
   { label: 'Invoices', short: 'Invoices', to: '/dashboard/invoices', icon: 'inv' },
+  { label: 'Usage', short: 'Usage', to: '/dashboard/usage', icon: 'usage' },
   { label: 'Payment links', short: 'Links', to: '/dashboard/payment-links', icon: 'link' },
   { label: 'API keys', short: 'API keys', to: '/dashboard/api-keys', icon: 'key' },
   { label: 'Webhooks', short: 'Webhooks', to: '/dashboard/webhooks', icon: 'hook' },
@@ -116,13 +117,13 @@ export function DashboardLayout() {
               </div>
             </div>
           </div>
-          {SECTIONS.slice(0, 3).map((section) => (
+          {SECTIONS.slice(0, 4).map((section) => (
             <SideLink key={section.to} to={link(section.to)} end={section.end} icon={section.icon}>
               {section.label}
             </SideLink>
           ))}
           <div className="navh">Developers</div>
-          {SECTIONS.slice(3, 5).map((section) => (
+          {SECTIONS.slice(4, 6).map((section) => (
             <SideLink key={section.to} to={link(section.to)} icon={section.icon}>
               {section.label}
             </SideLink>

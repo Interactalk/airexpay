@@ -1,4 +1,6 @@
+import type { FeeSnapshot } from '@airexpay/payment-core';
 import { useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import type { ExampleInvoice } from '../data/examples.ts';
 import { EXAMPLE_ADDRESS } from '../data/examples.ts';
 import { Icon } from './Icon.tsx';
@@ -94,6 +96,7 @@ export function InvoiceDrawer({
                 </div>
               </div>
             ) : null}
+            <FeeBreakdown fee={invoice.fee} />
             {invoice.guidance ? (
               <div
                 className="callout"
@@ -162,5 +165,52 @@ export function InvoiceDrawer({
         </div>
       </aside>
     </>
+  );
+}
+
+function groupDecimal(value: string): string {
+  const negative = value.startsWith('-');
+  const body = negative ? value.slice(1) : value;
+  const [whole, fraction] = body.split('.');
+  const grouped = (whole ?? '0').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const text = fraction !== undefined ? `${grouped}.${fraction}` : grouped;
+  return negative ? `-${text}` : text;
+}
+
+function FeeBreakdown({ fee }: { fee: FeeSnapshot }) {
+  const amount = (value: string) => `${groupDecimal(value)} ${fee.currency}`;
+  return (
+    <div data-testid="fee-breakdown" style={{ padding: '4px 20px 0' }}>
+      <div className="row between" style={{ marginBottom: 8 }}>
+        <h3 style={{ margin: 0 }}>Fee snapshot</h3>
+        <ExampleTag>Example data</ExampleTag>
+      </div>
+      <p className="muted" style={{ fontSize: 12.5, marginTop: 0 }}>
+        Configured provider rate {fee.providerFeeRate} (1.5% on the current plan), multiplied by{' '}
+        {fee.marginMultiplier}. Recheck the provider rate against NOWPayments&apos; official pricing
+        before go-live. The fee is invoiced to the merchant and is not taken from the customer
+        payment.
+      </p>
+      <dl className="kv" style={{ margin: 0 }}>
+        <dt>Provider fee</dt>
+        <dd className="num">{amount(fee.providerFee)}</dd>
+        <dt>AirExpay margin</dt>
+        <dd className="num">{amount(fee.margin)}</dd>
+        <dt>Total AirExpay fee</dt>
+        <dd className="num">{amount(fee.totalFee)}</dd>
+        <dt>Network fee</dt>
+        <dd className="num">
+          {amount(fee.networkFeeCharged)}
+          {fee.networkFeeMarkedUp ? ' · marked up' : ' · passed through'}
+        </dd>
+        <dt>Plan</dt>
+        <dd>
+          {fee.planId} v{fee.planVersion}
+        </dd>
+      </dl>
+      <Link to="/dashboard/usage" style={{ display: 'inline-block', margin: '12px 0 4px' }}>
+        Monthly usage statement
+      </Link>
+    </div>
   );
 }

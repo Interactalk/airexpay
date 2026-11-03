@@ -1,4 +1,9 @@
-import type { AuditRecord, PaymentSnapshot, TransitionResult } from '@airexpay/payment-core';
+import type {
+  AuditRecord,
+  FeeSnapshot,
+  PaymentSnapshot,
+  TransitionResult,
+} from '@airexpay/payment-core';
 import type { InvoiceStatus, PaymentStatus } from '@airexpay/shared';
 
 export interface InvoiceRecord {
@@ -28,6 +33,8 @@ export interface InvoiceRecord {
   rawStatus: string;
   network: string | null;
   merchantName: string;
+  /** Present for invoices created after the pricing snapshot. Not a SQL column. */
+  feeSnapshot?: FeeSnapshot;
 }
 
 export interface WebhookRecord {
@@ -67,6 +74,7 @@ export interface CreateInvoiceInput {
   expiresAt: string;
   createdAt: string;
   network: string | null;
+  feeSnapshot?: FeeSnapshot;
 }
 
 export interface AcceptWebhookInput {

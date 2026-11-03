@@ -3,7 +3,12 @@ import {
   SIMULATION_ORG_IDS,
   type ProviderMode,
 } from '@airexpay/configuration';
-import { getProvider, timingSafeEqual, type ProviderContext } from '@airexpay/payment-core';
+import {
+  getProvider,
+  quoteConfiguredFee,
+  timingSafeEqual,
+  type ProviderContext,
+} from '@airexpay/payment-core';
 import { newPublicId } from '@airexpay/shared';
 import {
   createInvoiceSchema,
@@ -68,6 +73,24 @@ export function invoiceJson(record: InvoiceRecord) {
       status: record.paymentStatus,
       raw_status: record.rawStatus,
     },
+    fee: record.feeSnapshot
+      ? {
+          plan_id: record.feeSnapshot.planId,
+          plan_version: record.feeSnapshot.planVersion,
+          effective_from: record.feeSnapshot.effectiveFrom,
+          quoted_at: record.feeSnapshot.quotedAt,
+          provider_fee_rate: record.feeSnapshot.providerFeeRate,
+          margin_multiplier: record.feeSnapshot.marginMultiplier,
+          provider_fee: record.feeSnapshot.providerFee,
+          margin: record.feeSnapshot.margin,
+          total_fee: record.feeSnapshot.totalFee,
+          network_fee: record.feeSnapshot.networkFee,
+          network_fee_charged: record.feeSnapshot.networkFeeCharged,
+          network_fee_marked_up: record.feeSnapshot.networkFeeMarkedUp,
+          currency: record.feeSnapshot.currency,
+          rounding: record.feeSnapshot.rounding,
+        }
+      : null,
   };
 }
 
@@ -165,6 +188,12 @@ export async function createInvoice(c: Context, deps: InvoiceDeps): Promise<Resp
   });
   const raw = payment.raw as { invoice_id?: string; network?: string };
   const publicId = newPublicId('inv');
+  const feeSnapshot = quoteConfiguredFee({
+    at: nowIso,
+    priceAmount: body.price_amount,
+    currency: body.price_currency,
+    networkFee: '0',
+  });
   const record = await deps.db.createInvoice({
     organizationId,
     publicId,
@@ -181,6 +210,7 @@ export async function createInvoice(c: Context, deps: InvoiceDeps): Promise<Resp
     expiresAt: new Date(now.getTime() + 60 * 60 * 1000).toISOString(),
     createdAt: nowIso,
     network: raw.network ?? null,
+    feeSnapshot,
   });
   const response = invoiceJson(record);
   await deps.db.saveIdempotency({

@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@airexpay/payment-core": "workspace:*",
     "@airexpay/shared": "workspace:*",
     "@airexpay/validation": "workspace:*",
     "@airexpay/ui": "workspace:*",
