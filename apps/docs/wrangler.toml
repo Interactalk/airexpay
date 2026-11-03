@@ -1,0 +1,37 @@
+# Docs Worker. Static. Do not deploy.
+name = "airexpay-docs"
+main = "src/index.ts"
+compatibility_date = "2026-11-03"
+workers_dev = false
+
+# route: docs.airexpay.com/*
+# [[routes]]
+# pattern = "docs.airexpay.com/*"
+# zone_name = "airexpay.com"
+
+[vars]
+ENVIRONMENT = "dev"
+
+[env.staging]
+name = "airexpay-docs-staging"
+workers_dev = false
+
+# route: docs-staging.airexpay.com/*
+# [[env.staging.routes]]
+# pattern = "docs-staging.airexpay.com/*"
+# zone_name = "airexpay.com"
+
+[env.staging.vars]
+ENVIRONMENT = "staging"
+
+[env.production]
+name = "airexpay-docs"
+workers_dev = false
+
+# route: docs.airexpay.com/*
+# [[env.production.routes]]
+# pattern = "docs.airexpay.com/*"
+# zone_name = "airexpay.com"
+
+[env.production.vars]
+ENVIRONMENT = "production"

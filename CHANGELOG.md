@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.6 — 2026-11-03 (Asia/Dhaka, UTC+6)
+
+- Separate Workers for marketing, app, pay, api, auth, docs, and admin. Every origin is env-configurable in `@airexpay/config`. Staging hosts use a `-staging` name and do not accept the production session cookie.
+- Auth sets an HttpOnly, Secure, SameSite=Lax cookie (`ax_sess` or `ax_sess_stg`) on `Domain=.airexpay.com`. Access tokens rotate. CSRF uses an allowlisted Origin plus a double-submit token. Login redirects accept only that environment’s origins. `pay.*` strips auth cookies. Admin is a scaffold behind Cloudflare Access and an admin role.
+- DNS records and routes are documented and left commented in Wrangler. Nothing was deployed, no DNS was created, and live Supabase Auth was not called. This branch is based on the open pricing pull request.
+
 ## 0.1.5 — 2026-11-03 (Asia/Dhaka, UTC+6)
 
 - Config-driven pricing. The default provider cost is 1.5% (`0.015`), and `marginMultiplier` stays 1.5. On a 100.00 USD invoice the provider fee is 1.50, the AirExpay margin is 0.75, and the total merchant fee is 2.25. Fees are rounded half away from zero in integer minor units. Plans are versioned with effective dates. Each invoice stores a snapshot of the provider fee, margin, and total fee.

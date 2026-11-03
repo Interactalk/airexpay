@@ -63,8 +63,21 @@ importers:
         specifier: 4.157.0
         version: 4.157.0(@types/node@22.20.5)
 
+  apps/admin:
+    dependencies:
+      '@airexpay/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+    devDependencies:
+      esbuild:
+        specifier: ^0.25.11
+        version: 0.25.12
+
   apps/api:
     dependencies:
+      '@airexpay/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       '@airexpay/configuration':
         specifier: workspace:*
         version: link:../../packages/configuration
@@ -90,6 +103,51 @@ importers:
       wrangler:
         specifier: ^4.45.3
         version: 4.157.0(@types/node@22.20.5)
+
+  apps/app:
+    dependencies:
+      '@airexpay/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+    devDependencies:
+      esbuild:
+        specifier: ^0.25.11
+        version: 0.25.12
+
+  apps/auth:
+    dependencies:
+      '@airexpay/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      hono:
+        specifier: ^4.10.4
+        version: 4.13.16
+    devDependencies:
+      esbuild:
+        specifier: ^0.25.11
+        version: 0.25.12
+
+  apps/docs:
+    devDependencies:
+      esbuild:
+        specifier: ^0.25.11
+        version: 0.25.12
+
+  apps/marketing:
+    devDependencies:
+      esbuild:
+        specifier: ^0.25.11
+        version: 0.25.12
+
+  apps/pay:
+    dependencies:
+      '@airexpay/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+    devDependencies:
+      esbuild:
+        specifier: ^0.25.11
+        version: 0.25.12
 
   apps/web:
     dependencies:
@@ -137,7 +195,13 @@ importers:
         specifier: ^7.1.12
         version: 7.3.7(@types/node@22.20.5)(jiti@1.21.7)
 
-  packages/configuration: {}
+  packages/config: {}
+
+  packages/configuration:
+    dependencies:
+      '@airexpay/config':
+        specifier: workspace:*
+        version: link:../config
 
   packages/payment-core:
     dependencies:

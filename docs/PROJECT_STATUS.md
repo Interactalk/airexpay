@@ -12,21 +12,21 @@ Updated: 2026-11-03 (Asia/Dhaka, UTC+6)
 | Database                | Phase 1 migration is already on the dev project and was not edited. Later migrations were applied only to embedded Postgres in tests. Unit tests still default to the in-memory repository. Dev and staging Wrangler configs select `STORAGE_BACKEND=durable_object` with the `INVOICE_STORE` binding. Nothing was deployed and no hosted database was changed. |
 | Payment integration     | Simulation mode. Mock provider, number-preserving IPN verifier, local outbox worker. Live calls disabled.                                                                                                                                                                                                                                                       |
 | Security audit          | Pending                                                                                                                                                                                                                                                                                                                                                         |
-| Staging deployment      | Not done. Not authorized by this change. Staging URLs are configured only: `https://staging.airexpay.com` and `https://api-staging.airexpay.com`.                                                                                                                                                                                                               |
+| Staging deployment      | Not done. Not authorized by this change. Staging hosts are listed in `docs/SUBDOMAINS.md`. Checkout is `https://pay-staging.airexpay.com`. Marketing is `https://staging.airexpay.com`. API is `https://api-staging.airexpay.com`.                                                                                                                              |
 | Production deployment   | Not authorized                                                                                                                                                                                                                                                                                                                                                  |
 | Live transactions       | Not authorized                                                                                                                                                                                                                                                                                                                                                  |
-| Current milestone       | Phase 1.5 platform fee pricing, branched from the open onboarding pull request                                                                                                                                                                                                                                                                                  |
+| Current milestone       | Phase 1.6 multi-subdomain Workers, branched from the open pricing pull request                                                                                                                                                                                                                                                                                  |
 
 ## Evidence for this milestone
 
-Commands run locally on 2026-11-03 for platform fee pricing:
+Commands run locally on 2026-11-03 for the subdomain Workers:
 
 - `pnpm lint` — passed (one react-refresh warning in `theme.tsx`; Prettier check passed)
 - `pnpm typecheck` — passed
-- `pnpm test` — 18 files, 91 tests passed, 0 failed
-- `pnpm build` — API bundle (`dist/index.js`) and web production build passed
+- `pnpm test` — 19 files, 103 tests passed, 0 failed
+- `pnpm build` — API, web, auth, pay, app, marketing, docs, and admin bundles passed
 
-A 100.00 USD quote at the current plan returns provider fee 1.50, margin 0.75, and total fee 2.25. The same numbers are on `POST /v1/invoices`. The invoice drawer and usage statement were opened in Chromium at 1440×900 and 390×844. The public pricing page still has no amounts. Mobile `scrollWidth` stayed 390. The full Playwright suite from onboarding was not re-run.
+Cookie, CSRF, redirect, and CORS tests passed. Staging rejects the production cookie name. Pay strips auth cookies. No DNS record was created and nothing was deployed.
 
 Phase 1.2 Durable Object evidence still applies: Miniflare creates an invoice, evicts the organization and directory objects, simulates a signed IPN, and reads `paid` back from SQLite. This change does not redeploy staging and does not apply migrations.
 
@@ -45,7 +45,7 @@ Vars already in `wrangler.toml`:
 | `SIMULATION_IPN_SECRET`      | `simulation-ipn-secret` (public placeholder)    |
 | `SIMULATION_API_KEY`         | `ak_test_simulation_alpha` (public placeholder) |
 | `STORAGE_BACKEND`            | `durable_object`                                |
-| `PUBLIC_CHECKOUT_BASE_URL`   | `https://staging.airexpay.com`                  |
+| `PUBLIC_CHECKOUT_BASE_URL`   | `https://pay-staging.airexpay.com`              |
 | `DATABASE_URL`               | empty                                           |
 
 Binding:
@@ -87,6 +87,7 @@ No `NOWPAYMENTS_API_KEY`, no hosted `DATABASE_URL`, and no production environmen
 | 5.10 Design system v0.5 frontend                                   | TESTED locally. Dashboard data is example-only. Checkout polls the simulation API. Not deployed.                                     |
 | 5.11 Merchant onboarding and mock KYC                              | TESTED locally. Migration file added and not applied to a hosted database. Not deployed.                                             |
 | 5.12 Platform fee pricing and monthly usage ledger                 | TESTED locally. Default provider rate is the configured 1.5%. No hosted migration, no deploy, no NOWPayments call. Mode A stays off. |
+| 5.13 Multi-subdomain Workers and shared auth                       | TESTED locally. DNS and deploy are not done. Live Supabase Auth is not called.                                                       |
 
 ## Decision requests for owner
 
