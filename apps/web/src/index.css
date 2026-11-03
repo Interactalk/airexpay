@@ -1,0 +1,38 @@
+@import '@fontsource/outfit/400.css';
+@import '@fontsource/outfit/500.css';
+@import '@fontsource/outfit/600.css';
+@import '@fontsource/newsreader/400.css';
+@import '@fontsource/newsreader/500.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 40 33% 96%;
+  --foreground: 30 8% 12%;
+  --card: 40 40% 99%;
+  --card-foreground: 30 8% 12%;
+  --primary: 156 38% 18%;
+  --primary-foreground: 40 33% 96%;
+  --muted: 40 18% 92%;
+  --muted-foreground: 30 6% 36%;
+  --border: 36 16% 84%;
+  --ring: 156 38% 18%;
+  --radius: 0.9rem;
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(1200px 500px at 10% -10%, hsl(156 24% 90%) 0%, transparent 55%),
+    hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: Outfit, ui-sans-serif, system-ui, sans-serif;
+}
+
+#root {
+  min-height: 100vh;
+}
