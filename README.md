@@ -2,7 +2,7 @@
 
 Simple crypto payments. Global business. — a product of AirexPay LLC.
 
-**Status:** Phase 1.1, simulation only. Live payments are not authorized. See `docs/PROJECT_STATUS.md`.
+**Status:** Phase 1.2, simulation only. Live payments are not authorized. See `docs/PROJECT_STATUS.md`.
 
 ## Key finding
 
@@ -10,7 +10,7 @@ NOWPayments' current Terms (FD Transfers LLC, updated 19 Oct 2026, §15.1) exclu
 
 ## This repository
 
-Phase 1.1 is a pnpm monorepo that runs against a mock provider. The API defaults to an in-memory database. `STORAGE_BACKEND=postgres` does not connect to a hosted database. The Phase 1 migration is already on the dev project; later migrations are new files and are not applied by this app. `pnpm --filter @airexpay/api deploy` exits without contacting Cloudflare.
+Phase 1.2 is a pnpm monorepo that runs against a mock provider. Unit tests still default to an in-memory database. `STORAGE_BACKEND=durable_object` uses the `INVOICE_STORE` Durable Object binding (configured for the dev and staging Workers). `STORAGE_BACKEND=postgres` does not connect to a hosted database. The Phase 1 migration is already on the dev project; later migrations are new files and are not applied by this app. `pnpm --filter @airexpay/api deploy` exits without contacting Cloudflare.
 
 ```bash
 pnpm install

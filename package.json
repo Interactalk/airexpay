@@ -1,7 +1,7 @@
 {
   "name": "airexpay",
   "private": true,
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "AirExpay — non-custodial crypto payment gateway software by AirexPay LLC. Phase 1 is simulation only.",
   "type": "module",
   "packageManager": "pnpm@10.33.4",
@@ -19,6 +19,7 @@
     "dev:api:local": "pnpm --filter @airexpay/api dev:local"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.3.14",
     "@eslint/js": "^9.39.1",
     "@types/node": "^22.19.1",
     "@types/qrcode": "^1.5.6",
@@ -29,9 +30,9 @@
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "prettier": "^3.6.2",
-    "@electric-sql/pglite": "^0.3.14",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.3",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "wrangler": "4.157.0"
   }
 }

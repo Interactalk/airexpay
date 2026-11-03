@@ -51,19 +51,55 @@ export function isModeAEnabled(envValue: string | undefined): boolean {
   return MODE_A_FEATURE_FLAG === true && envValue === 'true';
 }
 
+export function isProductionEnvironment(environment: string | undefined): boolean {
+  return environment === 'production';
+}
+
 export function assertSimulationEnvironment(environment: string | undefined): void {
-  if (environment === 'production') {
+  if (isProductionEnvironment(environment)) {
     throw new Error('Production is not authorized for AirExpay Phase 1');
   }
 }
 
-export type StorageBackendName = 'memory' | 'postgres';
+export type StorageBackendName = 'memory' | 'postgres' | 'durable_object';
 
-/** Default is in-memory. `postgres` still needs a caller-supplied local SQL client. */
+/**
+ * Default is in-memory. `postgres` still needs a caller-supplied local SQL client.
+ * `durable_object` needs the INVOICE_STORE binding and does not open a database.
+ */
 export function resolveStorageBackend(raw: string | undefined): StorageBackendName {
   const value = (raw ?? 'memory').trim() || 'memory';
-  if (value === 'memory' || value === 'postgres') return value;
+  if (value === 'memory' || value === 'postgres' || value === 'durable_object') return value;
   throw new Error(`Unknown STORAGE_BACKEND: ${value}`);
+}
+
+/** Only the exact string `true` turns livemode on. Missing and every other value stay false. */
+export function parseLivemode(raw: string | undefined): boolean {
+  return raw === 'true';
+}
+
+/** Fixed window for the simulation checkout routes. Shared by the memory and Durable Object limiters. */
+export const SIMULATION_CHECKOUT_LIMIT = 30;
+export const SIMULATION_CHECKOUT_WINDOW_MS = 60_000;
+
+export function isExactlyMockMode(modes: readonly ProviderMode[]): boolean {
+  return modes.length === 1 && modes[0] === 'mock';
+}
+
+/**
+ * Dev checkout routes are simulation-only.
+ * Allowed for `ENVIRONMENT=dev`, or for staging when the only provider mode is mock and livemode is false.
+ * Production, livemode, and any real provider mode are rejected.
+ */
+export function simulationCheckoutAllowed(input: {
+  environment: string | undefined;
+  allowedModes: readonly ProviderMode[];
+  livemode: boolean;
+}): boolean {
+  if (input.livemode) return false;
+  if (!isExactlyMockMode(input.allowedModes)) return false;
+  if (isProductionEnvironment(input.environment)) return false;
+  return input.environment === 'dev' || input.environment === 'staging';
 }
 
 /**

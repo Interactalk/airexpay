@@ -3,6 +3,7 @@ import { signNowPaymentsBody } from '@airexpay/payment-core';
 import { describe, expect, it } from 'vitest';
 import { createApp } from '../../apps/api/src/app.ts';
 import { MemoryDatabase } from '../../apps/api/src/db/memory.ts';
+import { MemoryRateLimiter } from '../../apps/api/src/rate-limit.ts';
 
 function app() {
   const db = new MemoryDatabase();
@@ -386,6 +387,84 @@ describe('public checkout', () => {
     });
     expect(((await view.json()) as { status: string }).status).toBe('waiting');
     expect(db.listAudits().some((row) => row.action === 'payment.transition_rejected')).toBe(true);
+  });
+});
+
+describe('simulation checkout gate', () => {
+  const body = JSON.stringify(invoiceBody);
+
+  async function post(environment: string, allowedModes: string, livemode = false) {
+    const api = createApp({
+      db: new MemoryDatabase(),
+      environment,
+      allowedModesRaw: allowedModes,
+      livemode,
+      checkoutBaseUrl: 'https://staging.airexpay.com',
+    });
+    return api.request('/api/dev/checkout/invoices', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'idempotency-key': 'idem_gate_1' },
+      body,
+    });
+  }
+
+  it('rejects the routes in production, when livemode is on, and when a real provider is allowed', async () => {
+    expect((await post('production', 'mock')).status).toBe(404);
+    const production = createApp({
+      db: new MemoryDatabase(),
+      environment: 'production',
+      allowedModesRaw: 'mock',
+      checkoutBaseUrl: 'https://staging.airexpay.com',
+    });
+    expect(
+      (
+        await production.request('/api/dev/checkout/inv_missing/simulate', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ payment_status: 'finished' }),
+        })
+      ).status,
+    ).toBe(404);
+    expect((await post('staging', 'mock', true)).status).toBe(404);
+    expect((await post('dev', 'mock', true)).status).toBe(404);
+    expect((await post('staging', 'mock,nowpayments_direct')).status).toBe(404);
+    expect((await post('staging', 'nowpayments_direct')).status).toBe(404);
+  });
+
+  it('allows the staging mock simulation route and rate-limits it', async () => {
+    const opened = await post('staging', 'mock', false);
+    expect(opened.status).toBe(201);
+
+    const limiter = new MemoryRateLimiter(2, 60_000);
+    const api = createApp({
+      db: new MemoryDatabase(),
+      environment: 'dev',
+      allowedModesRaw: 'mock',
+      livemode: false,
+      rateLimit: limiter,
+      checkoutBaseUrl: 'http://localhost:5173',
+    });
+    const first = await api.request('/api/dev/checkout/invoices', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'idempotency-key': 'idem_rate_1' },
+      body,
+    });
+    const second = await api.request('/api/dev/checkout/invoices', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'idempotency-key': 'idem_rate_2' },
+      body,
+    });
+    const third = await api.request('/api/dev/checkout/invoices', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'idempotency-key': 'idem_rate_3' },
+      body,
+    });
+    expect(first.status).toBe(201);
+    expect(second.status).toBe(201);
+    expect(third.status).toBe(429);
+    expect(Number(third.headers.get('retry-after'))).toBeGreaterThan(0);
+    const payload = (await third.json()) as { error: { code: string } };
+    expect(payload.error.code).toBe('rate_limited');
   });
 });
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.2 — 2026-11-03 (Asia/Dhaka, UTC+6)
+
+- Phase 1.2 simulation: `STORAGE_BACKEND=durable_object` implements the invoice repository on the SQLite `InvoiceStore` Durable Object (one object per organization, plus a directory and per-client rate objects). Dev and staging Wrangler configs declare the `INVOICE_STORE` binding. Unit tests stay on the in-memory repository.
+- Simulation checkout routes are allowed on staging when `ALLOWED_MODES` is exactly `mock` and livemode is false. They stay closed in production and whenever a non-mock mode or livemode is on, and they are rate-limited.
+- Merchant webhook secrets are encrypted at rest with AES-256-GCM (`WEBHOOK_SECRET_ENCRYPTION_KEY`). Rotation uses `WEBHOOK_SECRET_ENCRYPTION_KEY_PREVIOUS` as a decrypt-only key.
+- No Cloudflare deploy, no hosted database connection, no live provider calls.
+
 ## 0.1.1 — 2026-11-03 (Asia/Dhaka, UTC+6)
 
 - Phase 1.1 simulation: number-preserving NOWPayments IPN canonicalization, a repository with an in-memory default and a parameterized Postgres implementation (embedded Postgres only), durable rejection audits, a live checkout page, and a local merchant-webhook outbox worker.

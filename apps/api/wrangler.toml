@@ -19,15 +19,27 @@ enabled = true
 head_sampling_rate = 1
 
 # Public placeholders only. Real IPN secrets and API keys are not configured.
+# WEBHOOK_SECRET_ENCRYPTION_KEY is a Wrangler secret, not a var:
+#   wrangler secret put WEBHOOK_SECRET_ENCRYPTION_KEY --env staging
+# Optional during rotation: WEBHOOK_SECRET_ENCRYPTION_KEY_PREVIOUS
 [vars]
 ENVIRONMENT = "dev"
 ALLOWED_MODES = "mock"
 NOWPAYMENTS_MODE_A_ENABLED = "false"
+LIVEMODE = "false"
 SIMULATION_IPN_SECRET = "simulation-ipn-secret"
 SIMULATION_API_KEY = "ak_test_simulation_alpha"
 STORAGE_BACKEND = "memory"
 PUBLIC_CHECKOUT_BASE_URL = "http://localhost:5173"
 DATABASE_URL = ""
+
+[[durable_objects.bindings]]
+name = "INVOICE_STORE"
+class_name = "InvoiceStore"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["InvoiceStore"]
 
 [env.dev]
 name = "airexpay-api-dev"
@@ -49,11 +61,20 @@ head_sampling_rate = 1
 ENVIRONMENT = "dev"
 ALLOWED_MODES = "mock"
 NOWPAYMENTS_MODE_A_ENABLED = "false"
+LIVEMODE = "false"
 SIMULATION_IPN_SECRET = "simulation-ipn-secret"
 SIMULATION_API_KEY = "ak_test_simulation_alpha"
-STORAGE_BACKEND = "memory"
+STORAGE_BACKEND = "durable_object"
 PUBLIC_CHECKOUT_BASE_URL = "http://localhost:5173"
 DATABASE_URL = ""
+
+[[env.dev.durable_objects.bindings]]
+name = "INVOICE_STORE"
+class_name = "InvoiceStore"
+
+[[env.dev.migrations]]
+tag = "v1"
+new_sqlite_classes = ["InvoiceStore"]
 
 [env.staging]
 name = "airexpay-api-staging"
@@ -75,8 +96,17 @@ head_sampling_rate = 1
 ENVIRONMENT = "staging"
 ALLOWED_MODES = "mock"
 NOWPAYMENTS_MODE_A_ENABLED = "false"
+LIVEMODE = "false"
 SIMULATION_IPN_SECRET = "simulation-ipn-secret"
 SIMULATION_API_KEY = "ak_test_simulation_alpha"
-STORAGE_BACKEND = "memory"
+STORAGE_BACKEND = "durable_object"
 PUBLIC_CHECKOUT_BASE_URL = "https://staging.airexpay.com"
 DATABASE_URL = ""
+
+[[env.staging.durable_objects.bindings]]
+name = "INVOICE_STORE"
+class_name = "InvoiceStore"
+
+[[env.staging.migrations]]
+tag = "v1"
+new_sqlite_classes = ["InvoiceStore"]

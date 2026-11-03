@@ -1,5 +1,4 @@
 import {
-  assertSimulationEnvironment,
   parseAllowedModes,
   resolveCheckoutBaseUrl,
   SIMULATION_IPN_SECRET,
@@ -9,6 +8,7 @@ import { ProviderError } from '@airexpay/payment-core';
 import { Hono } from 'hono';
 import type { InvoiceRepository } from './db/repository.ts';
 import { errorBody, logEvent } from './http.ts';
+import { MemoryRateLimiter, type SimulationRateLimit } from './rate-limit.ts';
 import { createDevCheckout, getPublicCheckout, simulateDevCheckout } from './services/checkout.ts';
 import { createInvoice, getInvoice, type InvoiceDeps } from './services/invoices.ts';
 import { handleNowPaymentsWebhook } from './services/webhooks.ts';
@@ -20,14 +20,16 @@ export interface AppConfig {
   modeAEnv?: string | undefined;
   ipnSecret?: string | undefined;
   checkoutBaseUrl?: string | undefined;
+  livemode?: boolean | undefined;
+  rateLimit?: SimulationRateLimit | undefined;
 }
 
 type AppVariables = { requestId: string };
 
 export function createApp(config: AppConfig) {
   const environment = config.environment ?? 'dev';
-  assertSimulationEnvironment(environment);
   const allowedModes = parseAllowedModes(config.allowedModesRaw);
+  const livemode = config.livemode ?? false;
   const deps: InvoiceDeps = {
     db: config.db,
     ipnSecret: config.ipnSecret || SIMULATION_IPN_SECRET,
@@ -35,6 +37,8 @@ export function createApp(config: AppConfig) {
     modeAEnv: config.modeAEnv,
     checkoutBaseUrl: resolveCheckoutBaseUrl(environment, config.checkoutBaseUrl),
     environment,
+    livemode,
+    rateLimit: config.rateLimit ?? new MemoryRateLimiter(),
   };
 
   const app = new Hono<{ Variables: AppVariables }>();
@@ -80,8 +84,8 @@ export function createApp(config: AppConfig) {
     );
   });
 
-  app.get('/health', (c) => health(c, environment, allowedModes));
-  app.get('/api/health', (c) => health(c, environment, allowedModes));
+  app.get('/health', (c) => health(c, environment, allowedModes, livemode));
+  app.get('/api/health', (c) => health(c, environment, allowedModes, livemode));
 
   app.post('/api/webhooks/nowpayments', (c) =>
     handleNowPaymentsWebhook(c, { db: deps.db, ipnSecret: deps.ipnSecret }),
@@ -113,6 +117,7 @@ function health(
   c: { json: (body: unknown, status?: number) => Response; get: (key: 'requestId') => string },
   environment: string,
   allowedModes: readonly ProviderMode[],
+  livemode: boolean,
 ): Response {
   return c.json(
     {
@@ -120,7 +125,7 @@ function health(
       service: 'airexpay-api',
       environment,
       mode: 'simulation',
-      livemode: false,
+      livemode,
       allowed_modes: allowedModes,
       mode_a_enabled: false,
       time: new Date().toISOString(),

@@ -3,8 +3,14 @@ import type {
   PaymentEvent,
   PaymentSnapshot,
   TransitionResult,
+  WebhookSecretKeyring,
 } from '@airexpay/payment-core';
-import { emptyPaymentSnapshot } from '@airexpay/payment-core';
+import {
+  decryptWebhookSecret,
+  emptyPaymentSnapshot,
+  encryptWebhookSecret,
+  requireWebhookKey,
+} from '@airexpay/payment-core';
 import type { InvoiceStatus, PaymentStatus } from '@airexpay/shared';
 import { isDecimalString } from '@airexpay/shared';
 import type {
@@ -60,7 +66,10 @@ const INVOICE_SQL = `
  * (embedded Postgres in tests). This class does not open a network connection.
  */
 export class PostgresRepository implements InvoiceRepository {
-  constructor(private readonly sql: SqlPool) {}
+  constructor(
+    private readonly sql: SqlPool,
+    private readonly webhookKeys: WebhookSecretKeyring = {},
+  ) {}
 
   async listWebhooks(): Promise<readonly WebhookRecord[]> {
     const result = await this.sql.query(
@@ -395,11 +404,15 @@ export class PostgresRepository implements InvoiceRepository {
     active?: boolean;
   }): Promise<WebhookEndpointRecord> {
     const id = input.id ?? crypto.randomUUID();
+    const ciphertext = await encryptWebhookSecret(
+      input.secret,
+      requireWebhookKey(this.webhookKeys),
+    );
     await this.sql.query(
       `insert into public.webhook_endpoints (
          id, organization_id, url, secret_ciphertext, events, active
        ) values ($1::uuid, $2::uuid, $3, convert_to($4, 'UTF8'), $5::text[], $6)`,
-      [id, input.organizationId, input.url, input.secret, input.events, input.active ?? true],
+      [id, input.organizationId, input.url, ciphertext, input.events, input.active ?? true],
     );
     return {
       id,
@@ -419,14 +432,19 @@ export class PostgresRepository implements InvoiceRepository {
        where organization_id = $1::uuid and active = true and secret_ciphertext is not null`,
       [organizationId],
     );
-    return result.rows.map((row) => ({
-      id: text(row.id),
-      organizationId: text(row.organization_id),
-      url: text(row.url),
-      secret: text(row.secret),
-      events: asStringList(row.events),
-      active: bool(row.active),
-    }));
+    const key = requireWebhookKey(this.webhookKeys);
+    const listed = [];
+    for (const row of result.rows) {
+      listed.push({
+        id: text(row.id),
+        organizationId: text(row.organization_id),
+        url: text(row.url),
+        secret: await decryptWebhookSecret(text(row.secret), key, this.webhookKeys.previous),
+        events: asStringList(row.events),
+        active: bool(row.active),
+      });
+    }
+    return listed;
   }
 
   async listDueOutbox(

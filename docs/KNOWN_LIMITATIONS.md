@@ -1,17 +1,20 @@
-# Known limitations (Phase 1.1)
+# Known limitations (Phase 1.2)
 
 Updated: 2026-11-03 (Asia/Dhaka, UTC+6).
 
 ## Simulation boundary
 
-- The default API database is in-memory. It lives in one Worker isolate, disappears on restart, and is not shared across isolates. `STORAGE_BACKEND=postgres` refuses hosted URLs and does not open a connection from the Worker. Tests inject PGlite.
-- `20261103120000_phase1_foundation.sql` is already applied on the dev project and is not edited here. `20261103140811_phase1_1_transition_rejections.sql` and `20261103140812_phase1_1_supabase_advisors.sql` are local files. This change does not apply them to the hosted project.
+- Unit tests and `pnpm dev:api:local` still default to the in-memory repository. That store lives in one process, disappears on restart, and is not shared across Worker isolates. `pnpm dev:api` (`wrangler dev --env dev`) and the staging Worker config use `STORAGE_BACKEND=durable_object`.
+- `InvoiceStore` keeps one organization's invoices, payments, idempotency keys, webhook endpoints, and outbox in `org:{organizationId}`. A separate `directory` object maps public ids and provider payment ids to that organization. Those two objects are not one transaction: a crash after the organization write and before the directory write can leave an invoice that checkout cannot find until it is created again. Rate-limit counters live on `rate:{client}`.
+- `STORAGE_BACKEND=postgres` refuses hosted URLs and does not open a connection from the Worker. Tests inject PGlite.
+- `20261103120000_phase1_foundation.sql` is already applied on the dev project and is not edited here. `20261103140811_phase1_1_transition_rejections.sql` and `20261103140812_phase1_1_supabase_advisors.sql` are local files. This change does not apply them to the hosted project and does not deploy the Worker.
 - `NowPaymentsProvider` has no HTTP client path for create, estimate, or get. Tests assert `fetch` is not called.
 - `MODE_A_FEATURE_FLAG` in `packages/configuration` is `false`. An env value of `true` does not enable platform / sub-partner mode.
 - Checkout addresses are simulated. Do not send cryptocurrency to them.
 - There is no dashboard, Supabase Auth, API-key issuance UI, reconciliation cron, or email.
-- Merchant webhook signing secrets in the local skeleton are held in process memory, or as UTF-8 bytes in `secret_ciphertext` for the Postgres tests. AES-GCM with `CREDENTIALS_KEK` is not implemented. No HTTP response returns that secret.
-- Postgres `numeric` storage trims trailing zeros when amounts are read back (`49.00` can come back as `49`). The in-memory backend keeps the original decimal spelling. Idempotency replays the stored JSON response either way.
+- Merchant webhook signing secrets are AES-256-GCM ciphertext (`v1.` + base64url of a 12-byte IV and the tagged ciphertext) under `WEBHOOK_SECRET_ENCRYPTION_KEY`. The memory and Postgres repositories do the same. No HTTP response returns that secret. Provider API keys and IPN secrets are still not encrypted with `CREDENTIALS_KEK`.
+- Rotation: set `WEBHOOK_SECRET_ENCRYPTION_KEY_PREVIOUS` to the old key and `WEBHOOK_SECRET_ENCRYPTION_KEY` to the new key (each is base64 of 32 bytes, via `wrangler secret put`, never a var). Reads try the current key, then the previous key. Writes use only the current key. Re-save each webhook endpoint so its row is rewritten, then remove the previous key. Removing it first makes old ciphertext unreadable. There is no hosted row to rotate; this app has not written secrets to a hosted database.
+- Postgres `numeric` storage trims trailing zeros when amounts are read back (`49.00` can come back as `49`). The in-memory and Durable Object snapshots keep the original decimal spelling. Idempotency replays the stored JSON response either way.
 
 ## Webhooks
 
@@ -19,7 +22,7 @@ Updated: 2026-11-03 (Asia/Dhaka, UTC+6).
 - Invalid signatures are stored with `signature_valid = false` and answered `401`. NOWPayments may retry those deliveries. Valid duplicates of the same canonical body return `200` and do not apply a second transition.
 - Signature verification reads the raw body with a JSON tokenizer that preserves number tokens, sorts object keys recursively, and HMACs that canonical string with SHA-512. Comparison is constant-time. `0.10000000` stays `0.10000000`. Integers above 2^53 keep every digit. Quoted numeric strings stay quoted.
 - That canonical form is what we sign. A real NOWPayments fixture is still missing. If their signer re-encodes numbers (for example PHP `json_encode`) instead of keeping the raw tokens, a preserved-literal HMAC will not match their header. Do not treat this verifier as cleared for live IPNs until a sandbox body is checked.
-- Dev-only `POST /api/dev/checkout/{public_id}/simulate` signs a mock IPN on the server when `ENVIRONMENT=dev`. Other environments return 404. The browser does not get the IPN secret or the API key.
+- `POST /api/dev/checkout/invoices` and `POST /api/dev/checkout/{public_id}/simulate` are served when `ENVIRONMENT=dev`, or when `ENVIRONMENT=staging`, `ALLOWED_MODES` is exactly `mock`, and livemode is false. Production, livemode, and any real provider mode return 404. The in-memory limiter is per process. Staging uses `rate:{client}` (30 requests per 60 seconds, then 429 and `Retry-After`). The browser does not get the IPN secret or the API key.
 - The merchant outbox worker is a local function. It is not a Cloudflare Queue consumer. It refuses `ENVIRONMENT=staging` and `ENVIRONMENT=production`. Dead-letter means the row stays unpublished and `attempts` is at least 5. Events with no subscribed endpoint stay unpublished and are not failed.
 
 ## Database

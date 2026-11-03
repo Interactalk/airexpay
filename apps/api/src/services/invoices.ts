@@ -11,6 +11,7 @@ import {
   type CreateInvoiceBody,
 } from '@airexpay/validation';
 import type { Context } from 'hono';
+import type { SimulationRateLimit } from '../rate-limit.ts';
 import type { InvoiceRecord, InvoiceRepository } from '../db/repository.ts';
 import { errorBody, logEvent } from '../http.ts';
 
@@ -23,6 +24,8 @@ export interface InvoiceDeps {
   modeAEnv: string | undefined;
   checkoutBaseUrl: string;
   environment: string;
+  livemode: boolean;
+  rateLimit: SimulationRateLimit;
 }
 
 export function organizationForApiKey(token: string): string | null {

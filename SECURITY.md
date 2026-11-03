@@ -10,7 +10,7 @@ This repository is public. Do not open a public issue that includes a secret, a 
 
 - NOWPayments, Supabase, Cloudflare, Resend, or any other credential
 - `.env`, `.dev.vars`, or Wrangler secret values
-- Ciphertext keys (`CREDENTIALS_KEK`)
+- Ciphertext keys (`CREDENTIALS_KEK`, `WEBHOOK_SECRET_ENCRYPTION_KEY`, `WEBHOOK_SECRET_ENCRYPTION_KEY_PREVIOUS`)
 
 `.env.example` contains only public placeholders (`ak_test_simulation_alpha`, `simulation-ipn-secret`). They authenticate the in-memory demo and nothing else.
 
