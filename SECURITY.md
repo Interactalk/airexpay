@@ -18,5 +18,5 @@ This repository is public. Do not open a public issue that includes a secret, a 
 
 - Only provider status `finished` marks an invoice paid.
 - `partially_paid` becomes `underpaid` and is not fulfilled.
-- IPN signatures are HMAC-SHA512 over the recursively key-sorted JSON body, compared in constant time.
+- IPN signatures are HMAC-SHA512 over the recursively key-sorted JSON body. Number tokens keep the spelling from the raw body. Comparison is constant-time.
 - Mode A cannot be enabled with an environment variable while `MODE_A_FEATURE_FLAG` is false.

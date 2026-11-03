@@ -9,6 +9,7 @@ export function App() {
     <Shell>
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/pay" element={<CheckoutPage />} />
         <Route path="/pay/demo/:state" element={<CheckoutPage />} />
         <Route path="/pay/:publicId" element={<CheckoutPage />} />
         <Route path="*" element={<NotFoundPage />} />

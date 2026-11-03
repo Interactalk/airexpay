@@ -2,7 +2,7 @@
 
 Simple crypto payments. Global business. — a product of AirexPay LLC.
 
-**Status:** Phase 1 foundation, simulation only. Live payments are not authorized. See `docs/PROJECT_STATUS.md`.
+**Status:** Phase 1.1, simulation only. Live payments are not authorized. See `docs/PROJECT_STATUS.md`.
 
 ## Key finding
 
@@ -10,7 +10,7 @@ NOWPayments' current Terms (FD Transfers LLC, updated 19 Oct 2026, §15.1) exclu
 
 ## This repository
 
-Phase 1 is a pnpm monorepo that runs against a mock provider and an in-memory database. SQL migrations live in `supabase/migrations` and are not applied to any hosted project. `pnpm --filter @airexpay/api deploy` exits without contacting Cloudflare.
+Phase 1.1 is a pnpm monorepo that runs against a mock provider. The API defaults to an in-memory database. `STORAGE_BACKEND=postgres` does not connect to a hosted database. The Phase 1 migration is already on the dev project; later migrations are new files and are not applied by this app. `pnpm --filter @airexpay/api deploy` exits without contacting Cloudflare.
 
 ```bash
 pnpm install
@@ -18,8 +18,9 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build
-pnpm dev:web   # http://localhost:5173
-pnpm dev:api   # local Worker only, wrangler dev --local
+pnpm dev:web        # http://localhost:5173
+pnpm dev:api:local  # simulation API on http://127.0.0.1:8787 (no Cloudflare deploy)
+pnpm dev:api        # local Worker only, wrangler dev --local
 ```
 
 Requires Node.js 22 or newer. Copy `.env.example` if you want local placeholders. Those values are not credentials.

@@ -1,23 +1,16 @@
 import { bufferToHex, sha256Hex } from '@airexpay/shared';
+import {
+  canonicalJson,
+  materializeJsonNumbers,
+  parseJsonPreservingNumbers,
+} from './json-canonical.ts';
 
-export function sortJsonValue(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value.map((entry) => sortJsonValue(entry));
-  }
-  if (value !== null && typeof value === 'object') {
-    const source = value as Record<string, unknown>;
-    const sorted: Record<string, unknown> = {};
-    for (const key of Object.keys(source).sort()) {
-      sorted[key] = sortJsonValue(source[key]);
-    }
-    return sorted;
-  }
-  return value;
-}
-
-export function canonicalJson(value: unknown): string {
-  return JSON.stringify(sortJsonValue(value));
-}
+export {
+  canonicalJson,
+  materializeJsonNumbers,
+  parseJsonPreservingNumbers,
+  sortJsonValue,
+} from './json-canonical.ts';
 
 /** Constant-time string compare. Length mismatches still walk the longer input. */
 export function timingSafeEqual(leftValue: string, rightValue: string): boolean {
@@ -32,16 +25,28 @@ export function timingSafeEqual(leftValue: string, rightValue: string): boolean 
   return diff === 0;
 }
 
-export async function hmacSha512Hex(secret: string, message: string): Promise<string> {
+async function hmacHex(
+  secret: string,
+  message: string,
+  hash: 'SHA-256' | 'SHA-512',
+): Promise<string> {
   const key = await crypto.subtle.importKey(
     'raw',
     new TextEncoder().encode(secret),
-    { name: 'HMAC', hash: 'SHA-512' },
+    { name: 'HMAC', hash },
     false,
     ['sign'],
   );
   const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(message));
   return bufferToHex(signature);
+}
+
+export function hmacSha512Hex(secret: string, message: string): Promise<string> {
+  return hmacHex(secret, message, 'SHA-512');
+}
+
+export function hmacSha256Hex(secret: string, message: string): Promise<string> {
+  return hmacHex(secret, message, 'SHA-256');
 }
 
 export interface SignatureCheck {
@@ -52,9 +57,10 @@ export interface SignatureCheck {
 }
 
 /**
- * NOWPayments IPN: HMAC-SHA512 over JSON.stringify of the recursively key-sorted body.
- * The digest is hex. Comparison is constant-time.
- * Float re-serialization is a known risk — see docs/KNOWN_LIMITATIONS.md.
+ * NOWPayments IPN: HMAC-SHA512 over the recursively key-sorted body.
+ * Number tokens are copied from the raw body so re-serialization does not
+ * respell decimals or large integers. The digest is hex. Comparison is constant-time.
+ * See docs/DECISIONS.md D-020.
  */
 export async function verifyNowPaymentsSignature(
   rawBody: string,
@@ -67,19 +73,20 @@ export async function verifyNowPaymentsSignature(
   if (!signatureHeader) {
     return { valid: false, reason: 'missing_signature' };
   }
-  let parsed: unknown;
+  let tree: unknown;
   try {
-    parsed = JSON.parse(rawBody) as unknown;
+    tree = parseJsonPreservingNumbers(rawBody);
   } catch {
     return { valid: false, reason: 'invalid_json' };
   }
-  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+  if (tree === null || typeof tree !== 'object' || Array.isArray(tree)) {
     return { valid: false, reason: 'invalid_payload' };
   }
-  const canonical = canonicalJson(parsed);
+  const canonical = canonicalJson(tree);
   const expected = await hmacSha512Hex(secret, canonical);
   const provided = signatureHeader.trim().toLowerCase();
   const valid = timingSafeEqual(expected, provided);
+  const parsed = materializeJsonNumbers(tree);
   if (!valid) {
     return { valid: false, reason: 'signature_mismatch', parsed, canonical };
   }
@@ -90,7 +97,7 @@ export async function signNowPaymentsBody(
   body: unknown,
   secret: string,
 ): Promise<{ rawBody: string; signature: string }> {
-  const parsed = typeof body === 'string' ? (JSON.parse(body) as unknown) : body;
+  const parsed = typeof body === 'string' ? parseJsonPreservingNumbers(body) : body;
   const rawBody = canonicalJson(parsed);
   const signature = await hmacSha512Hex(secret, rawBody);
   return { rawBody, signature };
@@ -99,7 +106,7 @@ export async function signNowPaymentsBody(
 export async function webhookDedupeKey(provider: string, rawBody: string): Promise<string> {
   let canonical = rawBody;
   try {
-    canonical = canonicalJson(JSON.parse(rawBody) as unknown);
+    canonical = canonicalJson(parseJsonPreservingNumbers(rawBody));
   } catch {
     canonical = rawBody;
   }

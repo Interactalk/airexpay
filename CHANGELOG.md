@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1 — 2026-11-03 (Asia/Dhaka, UTC+6)
+
+- Phase 1.1 simulation: number-preserving NOWPayments IPN canonicalization, a repository with an in-memory default and a parameterized Postgres implementation (embedded Postgres only), durable rejection audits, a live checkout page, and a local merchant-webhook outbox worker.
+- New migrations only. `20261103120000_phase1_foundation.sql` is unchanged. Advisor fixes (empty `search_path`, private `is_member`, initplan `auth.uid()`, consolidated policies, foreign-key indexes, explicit service-role denies) and rejection audits are new files.
+- Checkout links use `PUBLIC_CHECKOUT_BASE_URL`. The web app calls `VITE_API_BASE_URL` (empty in local dev). Staging values are `https://staging.airexpay.com` and `https://api-staging.airexpay.com`.
+- Mode A stays off. No Cloudflare deploy, no hosted database connection, no live provider calls.
+
 ## 0.1.0 — 2026-11-03 (Asia/Dhaka, UTC+6)
 
 - Phase 1 simulation foundation: pnpm monorepo (`apps/web`, `apps/api`, shared packages), mock provider, NOWPayments IPN verifier, payment state machine, in-memory invoice API, hosted checkout preview, and local SQL migrations.

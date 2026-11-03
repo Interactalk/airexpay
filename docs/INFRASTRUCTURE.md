@@ -1,6 +1,6 @@
 # Infrastructure
 
-Environments: `dev` (local + mock), `staging` (Cloudflare preview + dev Supabase project, mock/sandbox), `production` (not authorized).
+Environments: `dev` (local + mock), `staging` (not deployed; checkout `https://staging.airexpay.com`, API `https://api-staging.airexpay.com`, mock/sandbox), `production` (not authorized).
 Cloudflare: Workers (web static assets + api), Queues (outbox), Cron Triggers (reconciliation every 5 min), WAF skip rule for webhook path. Secrets via `wrangler secret`. Supabase: one project per environment; migrations in `supabase/migrations`.
 
 ## Monthly cost estimate (public pricing read 2026-11-03 (Asia/Dhaka, UTC+6))

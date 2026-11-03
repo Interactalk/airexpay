@@ -16,10 +16,7 @@ export function Shell({ children }: { children: ReactNode }) {
               <NavLink to="/" className="text-muted-foreground hover:text-foreground">
                 Overview
               </NavLink>
-              <NavLink
-                to="/pay/demo/waiting"
-                className="text-muted-foreground hover:text-foreground"
-              >
+              <NavLink to="/pay" className="text-muted-foreground hover:text-foreground">
                 Checkout
               </NavLink>
             </nav>
