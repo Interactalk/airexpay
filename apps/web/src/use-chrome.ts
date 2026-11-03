@@ -8,8 +8,11 @@ export function useChrome() {
   const segment = matched?.params.reviewState;
   const routeReview = isReviewState(segment) ? segment : null;
   const environment = readEnvironment(search.get('environment'));
+  const approved =
+    typeof sessionStorage !== 'undefined' &&
+    sessionStorage.getItem('airexpay.onboarding.status') === 'approved';
   return {
-    ...resolveChrome(environment, routeReview),
+    ...resolveChrome(environment, routeReview, approved),
     environment,
     search: location.search,
   };

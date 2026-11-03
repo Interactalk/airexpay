@@ -13,6 +13,7 @@ const SECTIONS: { label: string; short: string; to: string; icon: IconName; end?
   { label: 'API keys', short: 'API keys', to: '/dashboard/api-keys', icon: 'key' },
   { label: 'Webhooks', short: 'Webhooks', to: '/dashboard/webhooks', icon: 'hook' },
   { label: 'Settings & team', short: 'Settings', to: '/dashboard/settings', icon: 'gear' },
+  { label: 'Onboarding', short: 'Onboarding', to: '/onboarding', icon: 'doc' },
 ];
 
 function hrefFor(to: string, review: string, search: string): string {
@@ -36,11 +37,7 @@ export function DashboardLayout() {
             <b>Simulation mode.</b> No real payments are processed. Invoices, payments and webhooks
             on this screen are simulated example data.
           </span>
-          <Link
-            className="sim-more"
-            to={link('/dashboard/api-keys')}
-            style={{ textDecoration: 'underline' }}
-          >
+          <Link className="sim-more" to="/onboarding" style={{ textDecoration: 'underline' }}>
             Learn about going live
           </Link>
         </div>

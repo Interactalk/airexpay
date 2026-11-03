@@ -6,6 +6,7 @@ import {
   type SimulationRateLimit,
 } from '../rate-limit.ts';
 import type { DirectoryRegistration } from './invoice-store.ts';
+import type { OnboardingSnapshot } from './onboarding-store.ts';
 import type {
   AcceptWebhookInput,
   AcceptWebhookResult,
@@ -60,6 +61,8 @@ export interface InvoiceStoreRpc {
   acceptUnmatchedWebhook(input: AcceptWebhookInput): Promise<AcceptWebhookResult>;
   listDirectoryWebhooks(): Promise<readonly WebhookRecord[]>;
   take(nowMs: number, limit: number, windowMs: number): Promise<RateLimitDecision>;
+  loadDirectoryOnboarding(): Promise<OnboardingSnapshot>;
+  saveDirectoryOnboarding(snapshot: OnboardingSnapshot): Promise<void>;
 }
 
 export interface InvoiceStoreClient {
@@ -207,6 +210,14 @@ export class DurableObjectRepository implements InvoiceRepository {
       if (row) return row;
     }
     return null;
+  }
+
+  loadOnboarding(): Promise<OnboardingSnapshot> {
+    return this.directory().loadDirectoryOnboarding();
+  }
+
+  saveOnboarding(snapshot: OnboardingSnapshot): Promise<void> {
+    return this.directory().saveDirectoryOnboarding(snapshot);
   }
 
   private org(organizationId: string): InvoiceStoreRpc {

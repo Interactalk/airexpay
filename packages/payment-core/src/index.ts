@@ -7,3 +7,6 @@ export * from './amounts.ts';
 export * from './mock-provider.ts';
 export * from './nowpayments-provider.ts';
 export * from './registry.ts';
+export * from './onboarding-state.ts';
+export * from './kyc-provider.ts';
+export * from './document-cipher.ts';

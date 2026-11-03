@@ -13,14 +13,14 @@ async function database() {
 }
 
 describe('phase 1 SQL migration', () => {
-  it('creates 21 RLS-protected tables and append-only history', async () => {
+  it('creates 24 RLS-protected tables and append-only history', async () => {
     const db = await database();
     const tables = await db.query<{ count: string }>(
       `select count(*)::text as count
        from information_schema.tables
        where table_schema = 'public' and table_type = 'BASE TABLE'`,
     );
-    expect(tables.rows[0]?.count).toBe('21');
+    expect(tables.rows[0]?.count).toBe('24');
 
     const rls = await db.query<{
       relname: string;
@@ -32,7 +32,7 @@ describe('phase 1 SQL migration', () => {
        join pg_namespace n on n.oid = c.relnamespace
        where n.nspname = 'public' and c.relkind = 'r'`,
     );
-    expect(rls.rows).toHaveLength(21);
+    expect(rls.rows).toHaveLength(24);
     expect(rls.rows.every((row) => row.relrowsecurity && row.relforcerowsecurity)).toBe(true);
 
     await db.exec(`

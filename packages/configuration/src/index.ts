@@ -17,6 +17,9 @@ export const SIMULATION_API_KEYS = {
 
 export const SIMULATION_IPN_SECRET = 'simulation-ipn-secret';
 
+/** Public simulation email code. Not a credential. Accepted only on dev and staging mock routes. */
+export const SIMULATION_EMAIL_CODE = '000000';
+
 export const SIMULATION_ORG_IDS = {
   alpha: '11111111-1111-4111-8111-111111111111',
   beta: '22222222-2222-4222-8222-222222222222',

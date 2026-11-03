@@ -15,7 +15,7 @@ Updated: 2026-11-03 (Asia/Dhaka, UTC+6)
 | Staging deployment      | Not done. Not authorized by this change. Staging URLs are configured only: `https://staging.airexpay.com` and `https://api-staging.airexpay.com`.                                                                                                                                                                                                               |
 | Production deployment   | Not authorized                                                                                                                                                                                                                                                                                                                                                  |
 | Live transactions       | Not authorized                                                                                                                                                                                                                                                                                                                                                  |
-| Current milestone       | Design system v0.5 frontend on the Phase 1.2 simulation API                                                                                                                                                                                                                                                                                                     |
+| Current milestone       | Phase 1.4 merchant onboarding on the unmerged design v0.5 frontend                                                                                                                                                                                                                                                                                              |
 
 ## Evidence for this milestone
 
@@ -23,9 +23,9 @@ Commands run locally on 2026-11-03:
 
 - `pnpm lint` — passed (one react-refresh warning in `theme.tsx`; Prettier check passed)
 - `pnpm typecheck` — passed
-- `pnpm test` — 14 files, 73 tests passed, 0 failed
+- `pnpm test` — 17 files, 82 tests passed, 0 failed
 - `pnpm build` — API bundle and web production build passed
-- `pnpm test:e2e` — 38 passed, 24 skipped. The skipped cases are the 390px checks on the desktop project. Mobile checks passed: six checkout states, server-polled status, `scrollWidth` equals 390, and dashboard tap targets at least 44px tall.
+- `pnpm test:e2e` — 40 passed, 24 skipped. Skipped rows are the 390px checks on the desktop project. Mobile passed checkout states, server-polled status, `scrollWidth` equals 390, and 44px tap targets. Camera allow and deny passed with Chromium `--use-fake-device-for-media-stream`.
 
 Phase 1.2 Durable Object evidence still applies: Miniflare creates an invoice, evicts the organization and directory objects, simulates a signed IPN, and reads `paid` back from SQLite. This change does not redeploy staging and does not apply migrations.
 
@@ -84,6 +84,7 @@ No `NOWPAYMENTS_API_KEY`, no hosted `DATABASE_URL`, and no production environmen
 | 5.8 Staging simulation checkout gate and rate limit                | TESTED. Production config returns 404. Not deployed.                                             |
 | 5.9 Merchant webhook secret AES-GCM                                | TESTED. `CREDENTIALS_KEK` for provider secrets is still not implemented.                         |
 | 5.10 Design system v0.5 frontend                                   | TESTED locally. Dashboard data is example-only. Checkout polls the simulation API. Not deployed. |
+| 5.11 Merchant onboarding and mock KYC                              | TESTED locally. Migration file added and not applied to a hosted database. Not deployed.         |
 
 ## Decision requests for owner
 

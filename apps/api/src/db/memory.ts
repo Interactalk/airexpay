@@ -20,6 +20,7 @@ import type {
   WebhookEndpointRecord,
   WebhookRecord,
 } from './repository.ts';
+import { OnboardingRecords, type OnboardingSnapshot } from './onboarding-store.ts';
 
 interface StoredEndpoint {
   id: string;
@@ -40,6 +41,7 @@ export interface MemorySnapshot {
   outbox: OutboxRecord[];
   deliveries: DeliveryInput[];
   audits: AuditRecord[];
+  onboarding?: OnboardingSnapshot;
 }
 
 export type {
@@ -80,6 +82,7 @@ export class MemoryDatabase implements InvoiceRepository {
   private readonly outbox = new Map<string, OutboxRecord>();
   private readonly deliveries: DeliveryInput[] = [];
   private invoiceSequence = 1000;
+  readonly onboarding = new OnboardingRecords();
 
   constructor(private readonly webhookKeys: WebhookSecretKeyring = {}) {}
 
@@ -97,6 +100,7 @@ export class MemoryDatabase implements InvoiceRepository {
       outbox: [...this.outbox.values()].map((row) => structuredClone(row)),
       deliveries: this.deliveries.map((row) => structuredClone(row)),
       audits: this.audits.map((row) => structuredClone(row)),
+      onboarding: this.onboarding.snapshot(),
     };
   }
 
@@ -122,6 +126,7 @@ export class MemoryDatabase implements InvoiceRepository {
     for (const event of copy.outbox) db.outbox.set(event.id, event);
     db.deliveries.push(...copy.deliveries);
     db.audits.push(...copy.audits);
+    db.onboarding.restore(copy.onboarding);
     return db;
   }
 
