@@ -1,0 +1,24 @@
+{
+  "name": "@airexpay/api",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --env dev --local",
+    "build": "esbuild src/index.ts --bundle --format=esm --platform=neutral --outfile=dist/index.js",
+    "typecheck": "wrangler types --env-interface Env && tsc -p tsconfig.json --noEmit",
+    "deploy": "echo 'Deploy is not authorized in Phase 1' && exit 1"
+  },
+  "dependencies": {
+    "@airexpay/configuration": "workspace:*",
+    "@airexpay/payment-core": "workspace:*",
+    "@airexpay/shared": "workspace:*",
+    "@airexpay/validation": "workspace:*",
+    "hono": "^4.10.4",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.11",
+    "wrangler": "^4.45.3"
+  }
+}

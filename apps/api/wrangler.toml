@@ -1,0 +1,73 @@
+# Phase 1 simulation Worker. Do not deploy. No routes, no account_id, workers_dev off.
+# `pnpm --filter @airexpay/api deploy` is intentionally a failing guard.
+name = "airexpay-api"
+main = "src/index.ts"
+compatibility_date = "2026-11-03"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = false
+
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+
+[observability.traces]
+enabled = true
+head_sampling_rate = 1
+
+# Public placeholders only. Real IPN secrets and API keys are not configured.
+[vars]
+ENVIRONMENT = "dev"
+ALLOWED_MODES = "mock"
+NOWPAYMENTS_MODE_A_ENABLED = "false"
+SIMULATION_IPN_SECRET = "simulation-ipn-secret"
+SIMULATION_API_KEY = "ak_test_simulation_alpha"
+
+[env.dev]
+name = "airexpay-api-dev"
+workers_dev = false
+
+[env.dev.observability]
+enabled = true
+head_sampling_rate = 1
+
+[env.dev.observability.logs]
+enabled = true
+head_sampling_rate = 1
+
+[env.dev.observability.traces]
+enabled = true
+head_sampling_rate = 1
+
+[env.dev.vars]
+ENVIRONMENT = "dev"
+ALLOWED_MODES = "mock"
+NOWPAYMENTS_MODE_A_ENABLED = "false"
+SIMULATION_IPN_SECRET = "simulation-ipn-secret"
+SIMULATION_API_KEY = "ak_test_simulation_alpha"
+
+[env.staging]
+name = "airexpay-api-staging"
+workers_dev = false
+
+[env.staging.observability]
+enabled = true
+head_sampling_rate = 1
+
+[env.staging.observability.logs]
+enabled = true
+head_sampling_rate = 1
+
+[env.staging.observability.traces]
+enabled = true
+head_sampling_rate = 1
+
+[env.staging.vars]
+ENVIRONMENT = "staging"
+ALLOWED_MODES = "mock"
+NOWPAYMENTS_MODE_A_ENABLED = "false"
+SIMULATION_IPN_SECRET = "simulation-ipn-secret"
+SIMULATION_API_KEY = "ak_test_simulation_alpha"
