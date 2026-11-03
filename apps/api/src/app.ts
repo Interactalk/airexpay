@@ -1,4 +1,12 @@
 import {
+  applyCors,
+  checkCsrf,
+  corsDecision,
+  readCookie,
+  sessionCookieSpec,
+  type MemorySessionStore,
+} from '@airexpay/config';
+import {
   parseAllowedModes,
   resolveCheckoutBaseUrl,
   simulationCheckoutAllowed,
@@ -31,6 +39,7 @@ export interface AppConfig {
   loadOnboarding?: (() => Promise<OnboardingSnapshot>) | undefined;
   saveOnboarding?: ((snapshot: OnboardingSnapshot) => Promise<void>) | undefined;
   documentKey?: string | undefined;
+  sessions?: MemorySessionStore | undefined;
 }
 
 type AppVariables = { requestId: string };
@@ -57,13 +66,21 @@ export function createApp(config: AppConfig) {
     const requestId = incoming && incoming.length <= 200 ? incoming : crypto.randomUUID();
     c.set('requestId', requestId);
     const origin = c.req.header('origin');
-    if (origin && origin === deps.checkoutBaseUrl) {
+    const runtime = environment === 'production' || environment === 'staging' ? environment : 'dev';
+    const decision = origin
+      ? corsDecision({ environment: runtime, surface: 'api', origin })
+      : { allow: false, credentials: false, origin: null };
+    if (decision.allow) {
+      const headers = new Headers();
+      applyCors(headers, decision);
+      headers.forEach((value, key) => c.header(key, value));
+    } else if (origin && origin === deps.checkoutBaseUrl) {
       c.header('Access-Control-Allow-Origin', origin);
       c.header('Vary', 'Origin');
       c.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
       c.header(
         'Access-Control-Allow-Headers',
-        'authorization, content-type, idempotency-key, x-request-id',
+        'authorization, content-type, idempotency-key, x-request-id, x-airexpay-csrf',
       );
       c.header('Access-Control-Expose-Headers', 'x-request-id, idempotency-replayed');
       c.header('Access-Control-Max-Age', '600');
@@ -100,6 +117,58 @@ export function createApp(config: AppConfig) {
     handleNowPaymentsWebhook(c, { db: deps.db, ipnSecret: deps.ipnSecret }),
   );
 
+  app.get('/v1/me', async (c) => {
+    const requestId = c.get('requestId');
+    if (!config.sessions) {
+      return c.json(
+        errorBody(requestId, 'invalid_request_error', 'not_found', 'Route not found'),
+        404,
+      );
+    }
+    const runtime = environment === 'production' || environment === 'staging' ? environment : 'dev';
+    const token = readCookie(c.req.header('cookie'), sessionCookieSpec(runtime).name);
+    const user = token ? await config.sessions.verifyRefresh(token) : null;
+    if (!user) {
+      return c.json(
+        errorBody(requestId, 'authentication_error', 'invalid_session', 'Session was not accepted'),
+        401,
+      );
+    }
+    return c.json({ user_id: user.userId, role: user.role, auth: 'session' });
+  });
+  app.post('/v1/session/ping', async (c) => {
+    const requestId = c.get('requestId');
+    const runtime = environment === 'production' || environment === 'staging' ? environment : 'dev';
+    const csrf = checkCsrf({
+      method: 'POST',
+      origin: c.req.header('origin'),
+      cookieHeader: c.req.header('cookie'),
+      headerToken: c.req.header('x-airexpay-csrf'),
+      environment: runtime,
+      surface: 'api',
+    });
+    if (!csrf.ok) {
+      return c.json(
+        errorBody(requestId, 'authentication_error', 'csrf_rejected', 'CSRF check failed'),
+        403,
+      );
+    }
+    if (!config.sessions) {
+      return c.json(
+        errorBody(requestId, 'invalid_request_error', 'not_found', 'Route not found'),
+        404,
+      );
+    }
+    const token = readCookie(c.req.header('cookie'), sessionCookieSpec(runtime).name);
+    const user = token ? await config.sessions.verifyRefresh(token) : null;
+    if (!user) {
+      return c.json(
+        errorBody(requestId, 'authentication_error', 'invalid_session', 'Session was not accepted'),
+        401,
+      );
+    }
+    return c.json({ ok: true, user_id: user.userId });
+  });
   app.post('/v1/invoices', (c) => createInvoice(c, deps));
   app.get('/v1/invoices/:id', (c) => getInvoice(c, deps));
   app.get('/v1/checkout/:publicId', (c) => getPublicCheckout(c, deps));

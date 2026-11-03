@@ -14,6 +14,7 @@ export default defineConfig({
       '@airexpay/validation': path.resolve('packages/validation/src/index.ts'),
       '@airexpay/payment-core': path.resolve('packages/payment-core/src/index.ts'),
       '@airexpay/configuration': path.resolve('packages/configuration/src/index.ts'),
+      '@airexpay/config': path.resolve('packages/config/src/index.ts'),
     },
   },
 });

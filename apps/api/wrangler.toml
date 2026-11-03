@@ -1,5 +1,7 @@
-# Phase 1 simulation Worker. Do not deploy. No routes, no account_id, workers_dev off.
-# `pnpm --filter @airexpay/api deploy` is intentionally a failing guard.
+# API Worker. Do not deploy. No account_id. workers_dev off.
+# Routes are comments until the owner approves DNS. Deploy stays a failing guard.
+# route: api.airexpay.com/*
+# route: api-staging.airexpay.com/*
 name = "airexpay-api"
 main = "src/index.ts"
 compatibility_date = "2026-11-03"
@@ -100,7 +102,7 @@ LIVEMODE = "false"
 SIMULATION_IPN_SECRET = "simulation-ipn-secret"
 SIMULATION_API_KEY = "ak_test_simulation_alpha"
 STORAGE_BACKEND = "durable_object"
-PUBLIC_CHECKOUT_BASE_URL = "https://staging.airexpay.com"
+PUBLIC_CHECKOUT_BASE_URL = "https://pay-staging.airexpay.com"
 DATABASE_URL = ""
 
 [[env.staging.durable_objects.bindings]]

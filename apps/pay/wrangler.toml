@@ -1,0 +1,37 @@
+# Pay Worker. Public checkout. Do not deploy. No account_id. workers_dev off.
+name = "airexpay-pay"
+main = "src/index.ts"
+compatibility_date = "2026-11-03"
+workers_dev = false
+
+# route: pay.airexpay.com/*
+# [[routes]]
+# pattern = "pay.airexpay.com/*"
+# zone_name = "airexpay.com"
+
+[vars]
+ENVIRONMENT = "dev"
+
+[env.staging]
+name = "airexpay-pay-staging"
+workers_dev = false
+
+# route: pay-staging.airexpay.com/*
+# [[env.staging.routes]]
+# pattern = "pay-staging.airexpay.com/*"
+# zone_name = "airexpay.com"
+
+[env.staging.vars]
+ENVIRONMENT = "staging"
+
+[env.production]
+name = "airexpay-pay"
+workers_dev = false
+
+# route: pay.airexpay.com/*
+# [[env.production.routes]]
+# pattern = "pay.airexpay.com/*"
+# zone_name = "airexpay.com"
+
+[env.production.vars]
+ENVIRONMENT = "production"

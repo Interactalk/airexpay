@@ -90,10 +90,10 @@ describe('simulation checkout access', () => {
 
 describe('public URLs', () => {
   it('uses the staging checkout and API origins when configured', () => {
-    expect(stagingCheckoutOrigin()).toBe('https://staging.airexpay.com');
+    expect(stagingCheckoutOrigin()).toBe('https://pay-staging.airexpay.com');
     expect(stagingApiOrigin()).toBe('https://api-staging.airexpay.com');
     expect(resolveCheckoutBaseUrl('staging', stagingCheckoutOrigin())).toBe(
-      'https://staging.airexpay.com',
+      'https://pay-staging.airexpay.com',
     );
     expect(resolveCheckoutBaseUrl('dev', undefined)).toBe('http://localhost:5173');
     expect(() => resolveCheckoutBaseUrl('staging', undefined)).toThrow(/PUBLIC_CHECKOUT_BASE_URL/);

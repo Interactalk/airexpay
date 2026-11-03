@@ -1,0 +1,16 @@
+{
+  "name": "@airexpay/admin",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --format=esm --platform=neutral --outfile=dist/index.js",
+    "deploy": "echo 'Deploy is not authorized in Phase 1' && exit 1"
+  },
+  "dependencies": {
+    "@airexpay/config": "workspace:*"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.11"
+  }
+}

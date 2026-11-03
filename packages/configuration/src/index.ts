@@ -1,3 +1,5 @@
+import { defaultOrigins } from '@airexpay/config';
+
 export * from './pricing.ts';
 
 export const PROVIDER_MODES = ['mock', 'nowpayments_direct', 'nowpayments_platform'] as const;
@@ -135,8 +137,8 @@ export function assertLocalDatabaseUrl(databaseUrl: string | undefined): void {
   }
 }
 
-const STAGING_CHECKOUT_ORIGIN = 'https://staging.airexpay.com';
-const STAGING_API_ORIGIN = 'https://api-staging.airexpay.com';
+const STAGING_CHECKOUT_ORIGIN = defaultOrigins('staging').pay;
+const STAGING_API_ORIGIN = defaultOrigins('staging').api;
 
 export function stagingCheckoutOrigin(): string {
   return STAGING_CHECKOUT_ORIGIN;
