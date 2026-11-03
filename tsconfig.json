@@ -11,7 +11,8 @@
       "@airexpay/validation": ["packages/validation/src/index.ts"],
       "@airexpay/payment-core": ["packages/payment-core/src/index.ts"],
       "@airexpay/configuration": ["packages/configuration/src/index.ts"],
-      "@airexpay/ui": ["packages/ui/src/index.ts"]
+      "@airexpay/ui": ["packages/ui/src/index.ts"],
+      "tailwindcss": ["apps/web/node_modules/tailwindcss"]
     },
     "jsx": "react-jsx",
     "strict": true,
